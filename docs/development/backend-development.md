@@ -125,8 +125,8 @@ La imagen también contiene los comandos de bootstrap y migraciones:
 ```
 
 En desarrollo se ejecutan mediante `go run` dentro del contenedor `api`. No hay un
-contenedor de migraciones. En producción se ejecutan desde los binarios compilados de
-la imagen.
+contenedor de migraciones. En la imagen runtime del backend (`target production`) se
+ejecutan desde los binarios compilados.
 
 ## Estructura
 
@@ -157,38 +157,38 @@ recompilaciones sin instalar Go en el host.
 go test ./...
 ```
 
-## Imagen de producción
+## Target de compilación del backend
 
-El `backend/Dockerfile` es multi-stage:
+`backend/Dockerfile` es multi-stage:
 
 - `development`: Go, Air, herramientas de pruebas y código montado.
 - `build`: compilación reproducible de binarios.
-- `production`: Alpine, binarios, CA, zona horaria y usuario `terra`; sin Go, sin Air
-  y sin código fuente.
+- `production`: imagen runtime mínima con Alpine, binarios, CA, zona horaria y
+  usuario `terra`; sin Go, sin Air y sin código fuente.
 
-Construcción de una imagen de producción:
+La etapa `production` conserva los binarios `/app/api`, `/app/worker`,
+`/app/migrate` y `/app/bootstrap`. Es un target técnico de compilación y una
+imagen runtime del backend; no constituye una release integral ni un
+procedimiento de despliegue soportado.
+
+CI construye esta etapa para comprobar que la imagen runtime contiene los
+binarios esperados y no incluye Go ni Air. CI no publica la imagen en un registro
+ni despliega servicios.
+
+Para una comprobación local equivalente, sin publicar ni desplegar:
 
 ```bash
 docker build \
   --target production \
   --build-arg VERSION="$(git rev-parse --short HEAD)" \
   --build-arg BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  -t registry.example/terra-backend:"$(git rev-parse --short HEAD)" \
+  -t terra-backend:runtime-check \
   ./backend
 ```
 
-La imagen contiene `/app/api`, `/app/worker`, `/app/migrate` y `/app/bootstrap`.
-El despliegue sustituye el contenedor con la nueva etiqueta; no usa bind mounts ni Air.
+El repositorio no define Compose productivo, frontend de producción, reverse
+proxy, TLS ni los procedimientos necesarios para una instalación integral. Esta
+sección no debe utilizarse como manual de despliegue productivo.
 
-Procedimiento de producción:
-
-1. ejecutar las pruebas en CI y construir la imagen `production`;
-2. asignar una etiqueta inmutable (`git rev-parse --short HEAD` o versión de release);
-3. publicar la imagen en el registro;
-4. actualizar el servicio con la nueva etiqueta;
-5. esperar los healthchecks de API y worker;
-6. comprobar en los logs `api_starting`/`worker_starting` con `version` y `build_time`;
-7. conservar la etiqueta anterior para rollback.
-
-Las migraciones se ejecutan como operación independiente con `/app/migrate`. No se
-recrean volúmenes ni se reinicia PostgreSQL para desplegar código.
+Las migraciones se ejecutan como operación independiente con `/app/migrate`. La
+imagen no recrea volúmenes ni reinicia PostgreSQL.

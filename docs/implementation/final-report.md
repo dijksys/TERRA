@@ -4,7 +4,9 @@
 
 TERRA se entrega como entorno de desarrollo local basado exclusivamente en Docker.
 Conserva la estructura `deploy/`, `backend/`, `frontend/`, `docs/` y añade el comando
-raíz `./terra`.
+raíz `./terra`. El target `production` de `backend/Dockerfile` se conserva como
+compilación técnica validada en CI; no forma parte de una release ni de un
+procedimiento de despliegue.
 
 ## 2. Arquitectura implementada
 
@@ -117,12 +119,16 @@ adicional y sin rollback automático.
 ## 12. Integración continua
 
 `.github/workflows/ci.yml` se ejecuta en push, PR y manualmente. Usa Docker, crea un
-`.env` ficticio, valida, construye, inicializa y ejecuta `./terra test all`. Publica
-artifacts y recopila registros en fallos. No despliega a ningún servidor.
+`.env` ficticio, valida, construye, inicializa y ejecuta `./terra test all`. También
+construye y valida el target `production` del backend; no publica la imagen ni
+despliega servicios. Sube artifacts y recopila registros en fallos. No despliega
+a ningún servidor.
 
 ## 13. Riesgos residuales
 
 - Los contenedores de desarrollo no son una configuración productiva.
+- El target `production` del backend es una imagen runtime validada en CI, no una
+  release integral ni una arquitectura de despliegue.
 - Las pruebas E2E no cubren el consentimiento Google/Turnstile real.
 - El adaptador de Drive no se probó contra archivos reales en esta ejecución.
 - La pérdida de `TOKEN_ENCRYPTION_KEY` obliga a reconectar Drive.

@@ -3,6 +3,11 @@
 TERRA separa cuatro responsabilidades en cuatro contenedores. La API nunca descarga documentos
 masivamente y el worker nunca sirve HTTP.
 
+Esta topología de cuatro servicios corresponde al entorno local de desarrollo definido en
+`deploy/compose.yaml`; no representa por sí sola una arquitectura institucional desplegable. El
+target `production` de `backend/Dockerfile` es una compilación técnica del backend y no cambia esta
+topología local.
+
 ```mermaid
 flowchart LR
     U[Trabajador / Administrador] -->|HTTP local| W[web<br/>React + Vite]

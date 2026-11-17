@@ -20,7 +20,8 @@ Uso: build.sh [--no-cache] [--no-pull] [web|api|worker ...]
 
 Construye imágenes de desarrollo. api y worker comparten terra-backend:local
 con Go y Air. PostgreSQL usa una imagen fijada y no se reconstruye.
-La imagen de producción se construye con docker build --target production.
+Este script no genera una release ni despliega. El target production del backend
+se valida por separado en CI.
 
 Opciones:
   --no-cache    reconstruye sin caché

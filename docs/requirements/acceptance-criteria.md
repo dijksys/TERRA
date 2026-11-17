@@ -82,7 +82,10 @@
 - [x] Copia de seguridad, verificación y restauración local.
 - [x] `bash -n` y ShellCheck sin advertencias.
 - [x] Documentación en `docs/development/`.
-- [x] Dockerfile y Compose sin configuraciones de producción.
+- [x] Compose sin configuración productiva ni staging.
+- [x] `frontend/Dockerfile` orientado al servidor de desarrollo Vite.
+- [x] `backend/Dockerfile` con target `production` para validación técnica de la
+  imagen runtime, sin release ni despliegue.
 - [x] `.env.example` exclusivamente local.
 - [x] `.env.production.example` eliminado.
-- [x] CI Docker-only sin deploy.
+- [x] CI Docker-only valida el target `production` del backend; no publica ni despliega.

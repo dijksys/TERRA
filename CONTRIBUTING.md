@@ -5,6 +5,8 @@
 1. Lee [docs/README.md](docs/README.md), [docs/implementation/PLAN.md](docs/implementation/PLAN.md) y los ADR aplicables.
 2. La API y el worker comparten dominio, pero **no** se mezclan sus puntos de entrada.
 3. No agregue contenedores. El límite es exactamente `web`, `api`, `worker`, `db`.
+   El target `production` de `backend/Dockerfile` es una etapa de compilación y
+   validación técnica, no una excepción para incorporar infraestructura productiva.
 4. No agregue dependencias sin justificarlas en un ADR o en el PR.
 5. Los secretos viven en `.env` (no versionado). Nunca escriba tokens, cookies o contraseñas en logs.
 6. Toda entrada del usuario se valida en el servidor siguiendo [docs/development/form-validation.md](docs/development/form-validation.md).

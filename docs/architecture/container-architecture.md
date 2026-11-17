@@ -20,23 +20,41 @@ adicionales.
 | api / worker | `terra-backend:local` | `backend/Dockerfile` |
 | db | `postgres:18-alpine` | imagen fijada, no se reconstruye |
 
-Los Dockerfiles incluyen las herramientas de desarrollo: Go, Air y pruebas en backend;
+Las etapas de desarrollo de los Dockerfiles incluyen Go, Air y pruebas en backend;
 Node, Vite, Vitest, Playwright y Chromium en web.
 
-## Desarrollo y producción
+## Entorno local y target de compilación del backend
 
-| Aspecto | Desarrollo | Producción |
+### Entorno ejecutable soportado
+
+El único entorno Compose proporcionado por el repositorio es el desarrollo local:
+
+- `web` con Vite, HMR y proxy `/api`;
+- `api` con Air y recarga automática;
+- `worker` con Air y recarga automática;
+- `db` con PostgreSQL 18.
+
+Este entorno se administra con `./terra` y los scripts de `deploy/scripts/`. No
+existe un Compose de producción o staging.
+
+### Target técnico del backend
+
+`backend/Dockerfile` es multi-stage:
+
+| Etapa | Contenido | Uso |
 |---|---|---|
-| Backend | `target: development`, bind de `backend/` | `target: production`, sin bind |
-| Proceso API | `air -c .air.api.toml` | `/app/api` |
-| Proceso worker | `air -c .air.worker.toml` | `/app/worker` |
-| Herramientas | Go, Air, tests | Solo binarios y runtime mínimo |
-| Cambios Go | Recarga automática | Nueva imagen y sustitución del contenedor |
-| Configuración | `.env` al crear el contenedor | Variables del entorno de despliegue |
-| Datos | Volumen PostgreSQL y documentos | Volumen gestionado, nunca recreado por código |
+| `development` | Go, Air, herramientas de pruebas y código montado | Desarrollo local |
+| `build` | Compilación de binarios | Insumo de `production` |
+| `production` | Runtime mínimo con `/app/{api,worker,migrate,bootstrap}`; sin Go, Air ni código fuente | Imagen runtime del backend validada por CI |
 
-La imagen de producción no contiene código fuente, Go ni Air. Las migraciones van
-embebidas en los binarios mediante `go:embed`.
+La etapa `production` es un target de compilación y una imagen runtime del
+backend, no una arquitectura de despliegue institucional. CI la construye para
+comprobar que contiene los binarios esperados y no las herramientas de
+desarrollo; no la publica en un registro ni despliega servicios.
+`frontend/Dockerfile` está destinado al servidor de desarrollo Vite y no define
+una imagen de frontend de producción.
+
+Las migraciones van embebidas en los binarios mediante `go:embed`.
 
 ## Redes y puertos
 

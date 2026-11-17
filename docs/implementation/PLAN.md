@@ -1,7 +1,9 @@
 # Plan de implementación — distribución de desarrollo local
 
 Estado: **implementado y validado localmente**. La distribución usa exclusivamente
-Docker y no incluye despliegue productivo.
+Docker y no incluye despliegue productivo. El target `production` de
+`backend/Dockerfile` se conserva como compilación técnica validada por CI; no
+constituye una distribución productiva.
 
 ## Fase 0 — Análisis y planificación
 
@@ -55,6 +57,7 @@ Docker y no incluye despliegue productivo.
 - [x] E2E con Playwright y Chromium dentro de Docker.
 - [x] Cobertura en `artifacts/`.
 - [x] `.github/workflows/ci.yml` exclusivamente Docker.
+- [x] Validación técnica del target `production` del backend en CI, sin publicación ni despliegue.
 - [x] `bash -n`, ShellCheck y validación de Compose.
 
 ## Fase 7 — Operación local

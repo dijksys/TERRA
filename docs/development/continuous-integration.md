@@ -16,17 +16,26 @@ que cancela las ejecuciones reemplazadas sobre la misma ref. La clonación usa
 
 ## Etapas
 
-1. Clonación del repositorio.
-2. Verificar la estructura requerida del repositorio.
-3. Generar un `.env` local controlado a partir de `.env.example` con valores ficticios.
-4. `./terra check`.
-5. `./terra build`.
-6. Construir y validar la imagen `production` sin Go ni Air.
-7. `./terra init`.
-8. `./terra test all`.
-9. En caso de fallo: el estado, el diagnóstico y los registros se guardan en `artifacts/`.
-10. Subir `artifacts/` (pruebas, cobertura, informe de Playwright, diagnósticos).
-11. Detener los contenedores con `./terra down --remove` (sin eliminar volúmenes).
+1. Clonación del repositorio y verificación de su estructura requerida.
+2. Preparación de un `.env` local controlado a partir de `.env.example` y de las
+   rutas temporales externas.
+3. Validación del entorno local y de la configuración Compose.
+4. Construcción de las imágenes de desarrollo con `./terra build`.
+5. Construcción del target `production` del backend.
+6. Validación de la imagen runtime: sin Go ni Air, con los binarios API y worker.
+7. Inicialización del stack local con `./terra init`.
+8. Verificación de dependencias del frontend y resolución de Radix.
+9. Pruebas del backend y frontend, build del frontend y E2E mediante
+   `./terra test all`.
+10. Recopilación de diagnósticos y carga de artefactos de pruebas, cobertura e
+    informes.
+11. Detención de los contenedores con `./terra down --remove` (sin eliminar
+    volúmenes).
+
+La construcción del target `production` es una **validación técnica del target
+production del backend, sin publicación ni despliegue**. El workflow no inicia
+sesión en un registro, no etiqueta releases, no publica imágenes y no contiene
+jobs de despliegue.
 
 ## Solo Docker
 

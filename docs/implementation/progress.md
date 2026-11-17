@@ -16,6 +16,8 @@ necesita Docker, Compose, Bash y Git.
 - PostgreSQL 18 con volumen `terra_terra-db`.
 - Dependencias del frontend en la imagen web y cachés Go en `.cache/`.
 - Sin Nginx, sin Compose de producción/staging, sin `.env.production`.
+- Backend con target `production` para validar una imagen runtime mínima; CI lo
+  construye sin publicar ni desplegar.
 - `.env.example` exclusivamente local.
 - Comando unificado `./terra` y scripts en `deploy/scripts/`.
 
@@ -91,6 +93,8 @@ Resultados:
 
 - Los contenedores de desarrollo ejecutan las herramientas y el servidor Vite; no
   representan una configuración de producción.
+- El target `production` del backend es una imagen runtime técnica, no una
+  distribución productiva completa.
 - Las pruebas de integración de Drive usan fixtures y no contactan Google.
 - El E2E cubre humo de interfaz, proxy y autenticación anónima; no automatiza el
   consentimiento Google/Turnstile real.

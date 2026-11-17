@@ -6,12 +6,29 @@ administrador inicie copias controladas de su Drive. Los documentos se conservan
 en un volumen privado y se clasifican por **área → cargo → trabajador →
 snapshot**.
 
-> **Distribución de desarrollo local**
->
-> Este repositorio proporciona exclusivamente un entorno local ejecutado con
-> Docker y Docker Compose. No constituye una arquitectura de despliegue
-> productivo. Cada institución debe definir su infraestructura, dominios,
-> certificados, redes, monitoreo y procedimientos operativos.
+## Alcance de esta distribución
+
+TERRA se proporciona actualmente como un entorno de desarrollo y validación
+local basado en Docker y Docker Compose. La configuración soportada se encuentra
+en un único archivo `deploy/compose.yaml`, que define cuatro servicios: `web`
+(Vite con HMR), `api` (Go), `worker` (Go) y `db` (PostgreSQL). El comando
+`./terra` y los scripts de `deploy/scripts/` administran este entorno local.
+
+El repositorio no constituye una distribución productiva lista para desplegar en
+una institución ni incluye una topología de producción o staging. Aunque
+`backend/Dockerfile` contiene un target multi-stage `production` para compilar y
+validar los binarios del backend, este se utiliza como comprobación técnica en
+CI. No representa por sí solo una release integral ni un procedimiento de
+despliegue soportado. El `frontend/Dockerfile` actual está destinado al servidor
+de desarrollo Vite.
+
+No se proporcionan Compose productivo, imagen de frontend de producción, reverse
+proxy, configuración TLS/certificados, dominios, orquestación, gestión de secretos
+productivos ni pipeline de publicación y despliegue. Cada
+institución debe diseñar, implementar, revisar y operar por separado su
+infraestructura, seguridad, comunicaciones, monitoreo, copias de seguridad,
+recuperación y procedimientos operativos antes de realizar una implantación
+productiva.
 
 ## Propiedad y mantenimiento
 
@@ -33,8 +50,17 @@ Incluye:
 - comando unificado `./terra` y scripts de operación local;
 - pruebas unitarias, de integración, E2E y CI exclusivamente Docker.
 
-No incluye Nginx de producción, Compose de producción/staging, certificados,
-dominios, VPS, Traefik, Cloudflare Tunnel ni procedimientos de publicación.
+No forman parte de esta distribución de despliegue:
+
+- Nginx ni reverse proxy productivo;
+- Compose de producción o staging;
+- certificados ni configuración TLS;
+- dominios;
+- VPS ni infraestructura institucional;
+- Traefik;
+- Cloudflare Tunnel;
+- procedimientos de publicación;
+- pipeline de despliegue.
 
 ## Arquitectura
 
@@ -168,8 +194,8 @@ API v3.
   automáticamente.
 - Las pruebas con aplicación OAuth External en estado **Prueba** pueden requerir
   reautorizar Drive cada siete días.
-- El entorno local no sustituye una revisión de seguridad ni un despliegue
-  productivo.
+- El entorno local no sustituye una revisión de seguridad ni una implantación
+  productiva institucional.
 
 ## Seguridad esencial
 

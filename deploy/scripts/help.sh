@@ -27,6 +27,7 @@ CONSTRUCCIÓN
   ./terra build --no-cache
   ./terra build web
   ./terra build api
+  Solo imágenes locales de desarrollo; no genera release ni despliega.
 
 ARRANQUE Y DETENCIÓN
   ./terra up

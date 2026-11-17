@@ -85,7 +85,9 @@ reinicia procesos: no recarga `.env` ni actualiza dependencias. `down` nunca usa
 ```
 
 API y worker comparten la imagen `terra-backend:local`. PostgreSQL usa
-`postgres:18-alpine` fijado y no se reconstruye.
+`postgres:18-alpine` fijado y no se reconstruye. `./terra build` construye
+imágenes locales de desarrollo; no genera una release ni despliega. El target
+`production` del backend se valida en CI.
 
 ## 6. Recarga automática y recreación
 

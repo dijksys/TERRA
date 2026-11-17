@@ -27,6 +27,7 @@
 | RNF-23 | Recuperación | Copias de seguridad coordinadas de BD, volumen y clave separada. | scripts + doc |
 | RNF-24 | Escalabilidad | Un worker puede procesar elementos con goroutines bajo límites. | worker |
 | RNF-25 | Compatibilidad | PostgreSQL 18, navegadores modernos con WebSocket. | versiones fijadas |
+| RNF-26 | Alcance de distribución | Un único Compose local; el target `production` del backend es validación técnica, sin release ni despliegue. | `deploy/compose.yaml`, Dockerfiles, CI |
 
 ## Supuestos
 

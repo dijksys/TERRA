@@ -80,10 +80,16 @@ Go se recargan con Air sin reconstruir la imagen.
 
 PostgreSQL usa la imagen fijada `postgres:18-alpine` y no se reconstruye.
 
-## Desarrollo y producción
+## Desarrollo local y construcción del backend
 
-- Desarrollo: bind mount de `backend/`, Air y `terra-backend:local`.
-- Producción: imagen multi-stage con binarios `/app/{api,worker,migrate,bootstrap}`,
-  sin Go, sin Air y sin código fuente montado.
-- La etiqueta de producción debe ser inmutable y desplegarse sustituyendo el
-  contenedor, no con bind mounts.
+- **Desarrollo local:** `deploy/compose.yaml` define `web`, `api`, `worker` y
+  `db`; el backend usa bind mount de `backend/`, Air y `terra-backend:local`.
+- **Backend:** `backend/Dockerfile` contiene las etapas `development`, `build` y
+  `production`. `production` genera una imagen runtime mínima con
+  `/app/{api,worker,migrate,bootstrap}`, sin Go, Air ni código fuente.
+- **Frontend:** `frontend/Dockerfile` está orientado al servidor de desarrollo
+  Vite; no existe una imagen de frontend de producción.
+- **Producción integral:** no incluida. El repositorio no define Compose
+  productivo, reverse proxy, TLS, dominios, publicación de imágenes ni un
+  procedimiento de despliegue. El target `production` del backend se valida en
+  CI como comprobación técnica, no como release.

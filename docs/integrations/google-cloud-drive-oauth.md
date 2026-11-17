@@ -319,6 +319,11 @@ para todos los proyectos.
 
 ## 12. Preparación para producción
 
+Esta sección prepara el proyecto de Google Cloud y sus credenciales para una
+institución que ya disponga de infraestructura productiva. No describe el
+despliegue de TERRA ni sustituye la configuración de hosting, TLS, proxy,
+secretos o dominios.
+
 **Las pruebas locales no equivalen a una publicación productiva.**
 
 Para producción:
