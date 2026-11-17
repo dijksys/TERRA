@@ -277,6 +277,8 @@ test('el drawer móvil reutiliza la sidebar y cierra al navegar', async ({ page 
   }
   await expect(drawer.getByRole('link', { name: 'Mis documentos' })).toHaveCount(0)
   await expect(drawer.getByRole('heading', { name: /ORGANIZACIÓN|CONTROL INSTITUCIONAL/ })).toHaveCount(0)
+  await expect(drawer.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible()
+  await expect(drawer.getByText('Cerrar sesión')).toBeVisible()
   await expect(drawer.getByRole('button', { name: 'Activar modo oscuro' })).toBeVisible()
 
   await drawer.getByRole('link', { name: 'Mi perfil', exact: true }).click()

@@ -179,6 +179,7 @@ Siteverify real exige un token de Cloudflare.
 | Sidebar hover-expandible / foco / táctil | frontend | Navegador | `app-sidebar.test.jsx` (presentación) | Playwright (72→280 px, hover, salida, táctil, workspace adaptativo, 861/860) | Cubierto |
 | Shell de worker / scroll / drawer | frontend | Navegador | — | Playwright (320–1920 px, dos superficies, scroll independiente) | Cubierto |
 | Tablas, formularios, modales, texto largo | frontend | Navegador | — | Playwright | Cubierto |
+| Scrollbars invisibles y scroll físico | frontend | Navegador | — | `modal-scroll.test.jsx` + Playwright (`scrollbar-visibility.spec.js`) | Cubierto |
 | Tema True Black / claro, superficies, dropdowns, persistencia | frontend | Navegador + localStorage | — | Playwright | Cubierto |
 | Explorador de archivos y carpetas de Drive | drive + frontend | HTTP + DB + navegador | adapter/API simulada | Go integration + Vitest + Playwright | Cubierto |
 | Cambio de contraseña local por rol y `has_local_credentials` | auth + frontend | HTTP + DB + navegador | AuthContext controlado | Go integration + Vitest + Playwright | Cubierto |

@@ -70,7 +70,7 @@ export const Select = forwardRef(function Select(
           collisionPadding={8}
           className="menu-content select-content"
         >
-          <SelectPrimitive.Viewport className="select-viewport">
+          <SelectPrimitive.Viewport className="select-viewport scrollbar-hidden">
             {resolvedOptions.map((option) => (
               <SelectPrimitive.Item
                 key={encodeValue(option.value)}

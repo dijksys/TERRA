@@ -72,6 +72,22 @@ describe('Select global', () => {
     expect(await screen.findByRole('option', { name: 'Nuevo' })).toBeInTheDocument()
   })
 
+  it('mantiene el viewport desplazable con la scrollbar oculta', async () => {
+    const manyOptions = Array.from({ length: 30 }, (_, index) => ({
+      value: `option-${index}`,
+      label: `Opción ${index + 1}`,
+    }))
+    render(<Select aria-label="Extenso" options={manyOptions} />)
+    const trigger = screen.getByRole('combobox', { name: 'Extenso' })
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+    fireEvent.click(trigger)
+
+    await screen.findByRole('option', { name: 'Opción 1' })
+    const viewport = document.querySelector('.select-viewport')
+    expect(viewport).toHaveClass('scrollbar-hidden')
+    expect(screen.getByRole('option', { name: 'Opción 30' })).toBeInTheDocument()
+  })
+
   it('no selecciona opciones deshabilitadas', async () => {
     const onChange = vi.fn()
     render(<Select aria-label="Estados" value="" options={options} onValueChange={onChange} />)

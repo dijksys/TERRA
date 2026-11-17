@@ -350,13 +350,19 @@
 }
 
 @layer utilities {
-  .admin-scroll-container {
+  .admin-scroll-container,
+  .scrollbar-hidden,
+  .table-wrap {
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
 
-  .admin-scroll-container::-webkit-scrollbar {
+  .admin-scroll-container::-webkit-scrollbar,
+  .scrollbar-hidden::-webkit-scrollbar,
+  .table-wrap::-webkit-scrollbar {
     display: none;
+    width: 0;
+    height: 0;
   }
 }
 
@@ -425,7 +431,8 @@
   .app-sidebar-desktop:not(:hover) .app-sidebar-brand-text,
   .app-sidebar-desktop:not(:hover) .app-sidebar-group-title,
   .app-sidebar-desktop:not(:hover) .app-sidebar-link-text,
-  .app-sidebar-desktop:not(:hover) .app-sidebar-user-info {
+  .app-sidebar-desktop:not(:hover) .app-sidebar-user-info,
+  .app-sidebar-desktop:not(:hover) .app-sidebar-logout-text {
     display: none;
   }
 

@@ -73,12 +73,25 @@ describe('AppSidebar', () => {
     const onLogout = vi.fn()
     renderSidebar({ onLogout })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    const logout = screen.getByRole('button', { name: 'Cerrar sesión' })
+    expect(logout).toBeInTheDocument()
+    expect(logout.querySelector('svg')).toBeInTheDocument()
+    expect(screen.getByText('Cerrar sesión')).toHaveClass('app-sidebar-logout-text')
+    fireEvent.click(logout)
     expect(onLogout).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('button', { name: 'Activar modo oscuro' }))
     expect(screen.getByRole('button', { name: 'Activar modo claro' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Inicio' })).toBeInTheDocument()
+  })
+
+  it('mantiene el texto completo de logout en la variante drawer', () => {
+    const drawer = renderSidebar({ variant: 'drawer' })
+    const logout = screen.getByRole('button', { name: 'Cerrar sesión' })
+    expect(logout).toBeInTheDocument()
+    expect(logout.querySelector('svg')).toBeInTheDocument()
+    expect(screen.getByText('Cerrar sesión')).toHaveClass('app-sidebar-logout-text')
+    expect(drawer.container.querySelector('[data-variant="drawer"]')).toBeInTheDocument()
   })
 
   it('notifica la navegación desde un enlace', () => {

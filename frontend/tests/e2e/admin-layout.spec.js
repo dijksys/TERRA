@@ -311,6 +311,36 @@ test('la sidebar se contrae al salir aunque el enlace conserve el foco', async (
   await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(74)
 })
 
+test('el footer oculta el texto de logout en mini y lo muestra expandido', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await mockApi(page)
+  await page.goto('/app/admin')
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+
+  const panel = page.getByTestId('sidebar-panel')
+  const footer = panel.getByTestId('sidebar-footer')
+  const logout = panel.getByRole('button', { name: 'Cerrar sesión' })
+  const logoutText = panel.getByText('Cerrar sesión')
+  const toggle = panel.getByRole('button', { name: 'Activar modo oscuro' })
+
+  await expect(logout).toBeVisible()
+  expect(await logoutText.evaluate((element) => getComputedStyle(element).display)).toBe('none')
+  expect(await logout.locator('svg').isVisible()).toBe(true)
+
+  const collapsedBox = await logout.boundingBox()
+  expect(Math.abs(collapsedBox.width - 44)).toBeLessThanOrEqual(1)
+  expect(Math.abs(collapsedBox.height - 44)).toBeLessThanOrEqual(1)
+  expect(await footer.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+
+  await panel.hover()
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(278)
+  await expect(logoutText).toBeVisible()
+  await expect(toggle).toBeVisible()
+  const [logoutBox, toggleBox] = await Promise.all([logout.boundingBox(), toggle.boundingBox()])
+  expect(Math.abs(logoutBox.y - toggleBox.y)).toBeLessThanOrEqual(1)
+  expect(await footer.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+})
+
 test('la navegación por teclado funciona sin expandir la sidebar', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await mockApi(page)
@@ -643,6 +673,9 @@ test('la navegación administrativa conserva todos los módulos y el drawer móv
     await expect(drawer.getByRole('link', { name: label, exact: true })).toBeVisible()
   }
   await expect(drawer.getByRole('link', { name: 'Almacenamiento' })).toHaveCount(0)
+  await expect(drawer.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible()
+  await expect(drawer.getByText('Cerrar sesión')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Activar modo oscuro' })).toBeVisible()
   expect(await drawer.getByRole('link', { name: 'Dashboard', exact: true }).count()).toBe(1)
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
   expect(overflow).toBeFalsy()

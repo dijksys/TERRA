@@ -40,6 +40,39 @@ recibe únicamente los grupos ya autorizados.
 Las pruebas de presentación viven en `frontend/tests/unit/app-sidebar.test.jsx`; las de
 geometría, hover, contracción, teclado, roles, tema y drawer están en Playwright.
 
+## Scrollbars invisibles
+
+`.scrollbar-hidden` es la utilidad global para ocultar visualmente la barra de
+desplazamiento sin alterar el scroll. `.admin-scroll-container` se conserva por
+compatibilidad y comparte la misma implementación.
+
+```css
+.admin-scroll-container,
+.scrollbar-hidden,
+.table-wrap {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-scroll-container::-webkit-scrollbar,
+.scrollbar-hidden::-webkit-scrollbar,
+.table-wrap::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+```
+
+Aplicarla solo a contenedores propios de TERRA que realmente tengan
+`overflow-y-auto`, `overflow-x-auto` o equivalente. No cambia el overflow, no
+bloquea rueda, gestos táctiles, teclado ni `scrollTop`/`scrollLeft`. Se usa en
+workspace, navegación lateral, modales, política, disclosure de Drive, textarea,
+viewport del Select y `.table-wrap`.
+
+La verificación combina estilos calculados y desplazamiento físico en
+`frontend/tests/e2e/scrollbar-visibility.spec.js`. No aplicar una regla global
+indiscriminada a elementos de terceros ni a contenedores sin scroll real.
+
 ## Edición en vivo
 
 Los archivos fuente bajo `src/`, `public/`, `tests/` y las configuraciones de desarrollo se montan mediante bind en `/app`. Los cambios en `src/` se reflejan a través del HMR de Vite.

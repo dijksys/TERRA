@@ -217,7 +217,7 @@ export default function WorkerDrive() {
                       Leer el contenido de la política
                       <ChevronDown className="h-4 w-4 transition group-open:rotate-180" aria-hidden="true" />
                     </summary>
-                    <div className="disclosure-body max-h-64 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+                    <div className="disclosure-body scrollbar-hidden max-h-64 overflow-y-auto whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
                       {policy.content}
                     </div>
                   </details>
