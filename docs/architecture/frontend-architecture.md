@@ -50,9 +50,10 @@ se limita en monitores ultrapanorámicos para no estirar la interfaz sin control
 documento nunca scrollea; el único propietario del scroll vertical es `admin-scroll`
 (`overflow-y: auto`, sin barra visible vía `.admin-scroll-container`). La navegación
 interna de `AppSidebar` también tiene scroll vertical independiente y sin scroll
-horizontal. Los contenedores propios de scroll usan `.scrollbar-hidden` (o
-`.admin-scroll-container`) para ocultar únicamente la barra visual, conservando el
-desplazamiento físico.
+horizontal. La barra visual se oculta globalmente para `html`, `body`, `#root`,
+sus descendientes y los portales de Radix; las clases `.scrollbar-hidden` y
+`.admin-scroll-container` se conservan como marcadores semánticos. El
+desplazamiento físico permanece intacto.
 
 `AppSidebar` concentra la marca, grupos, enlaces, estado activo, identidad del usuario,
 rol, área, logout y `ThemeToggle`. `AppLayout` conserva `useAuth`, la definición y el

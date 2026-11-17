@@ -255,19 +255,20 @@ test('la sidebar inicia en 72 px, expande a 280 px y reduce el workspace', async
   await page.goto('/app/admin')
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
 
-  const panel = page.getByTestId('sidebar-panel')
+  const sidebar = page.getByTestId('admin-sidebar')
+  const panel = sidebar.getByTestId('sidebar-panel')
   const workspace = page.getByTestId('admin-workspace')
-  const collapsed = await panel.boundingBox()
-  expect(collapsed.width).toBeGreaterThanOrEqual(70)
-  expect(collapsed.width).toBeLessThanOrEqual(74)
-  const workspaceBefore = await workspace.boundingBox()
+  const collapsed = await Promise.all([sidebar.boundingBox(), workspace.boundingBox()])
+  const [sidebarBefore, workspaceBefore] = collapsed
+  expect(sidebarBefore.width).toBeGreaterThanOrEqual(71)
+  expect(sidebarBefore.width).toBeLessThanOrEqual(73)
 
   const workersLabel = panel.getByRole('link', { name: 'Trabajadores' }).getByText('Trabajadores')
   expect(await workersLabel.evaluate((element) => getComputedStyle(element).display)).toBe('none')
 
   await panel.hover()
-  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(278)
-  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(282)
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeGreaterThanOrEqual(279)
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeLessThanOrEqual(281)
   expect(await workersLabel.evaluate((element) => getComputedStyle(element).display)).not.toBe('none')
   await expect(panel.getByTestId('sidebar-brand').getByText('Gestión documental')).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Cerrar sesión' })).toContainText('Cerrar sesión')
@@ -278,10 +279,14 @@ test('la sidebar inicia en 72 px, expande a 280 px y reduce el workspace', async
   expect(workspaceExpanded.width).toBeLessThan(workspaceBefore.width - 150)
 
   await page.mouse.move(1200, 450)
-  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(74)
-  const workspaceCollapsed = await workspace.boundingBox()
-  expect(Math.abs(workspaceCollapsed.x - workspaceBefore.x)).toBeLessThanOrEqual(1)
-  expect(Math.abs(workspaceCollapsed.width - workspaceBefore.width)).toBeLessThanOrEqual(1)
+  await expect.poll(async () => {
+    const [sidebarBox, workspaceBox] = await Promise.all([sidebar.boundingBox(), workspace.boundingBox()])
+    return Math.max(
+      Math.abs(sidebarBox.width - sidebarBefore.width),
+      Math.abs(workspaceBox.x - workspaceBefore.x),
+      Math.abs(workspaceBox.width - workspaceBefore.width),
+    )
+  }).toBeLessThanOrEqual(1)
 })
 
 test('la sidebar se contrae al salir aunque el enlace conserve el foco', async ({ page }) => {
@@ -290,25 +295,26 @@ test('la sidebar se contrae al salir aunque el enlace conserve el foco', async (
   await page.goto('/app/admin')
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
 
-  const panel = page.getByTestId('sidebar-panel')
+  const sidebar = page.getByTestId('admin-sidebar')
+  const panel = sidebar.getByTestId('sidebar-panel')
 
   await panel.hover()
-  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(278)
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeGreaterThanOrEqual(279)
   await panel.getByRole('link', { name: 'Trabajadores' }).click()
   await expect(page).toHaveURL(/\/app\/admin\/workers$/)
   await expect(panel.getByRole('link', { name: 'Trabajadores' })).toBeFocused()
 
   await page.mouse.move(1200, 450)
-  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(74)
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeLessThanOrEqual(73)
   await expect(panel.getByRole('link', { name: 'Trabajadores' })).toBeFocused()
 
   await panel.hover()
-  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(278)
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeGreaterThanOrEqual(279)
   await panel.getByRole('link', { name: 'Trabajadores' }).click()
   await expect(panel.getByRole('link', { name: 'Trabajadores' })).toBeFocused()
 
   await page.mouse.move(1200, 450)
-  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(74)
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeLessThanOrEqual(73)
 })
 
 test('el footer oculta el texto de logout en mini y lo muestra expandido', async ({ page }) => {
@@ -317,7 +323,8 @@ test('el footer oculta el texto de logout en mini y lo muestra expandido', async
   await page.goto('/app/admin')
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
 
-  const panel = page.getByTestId('sidebar-panel')
+  const sidebar = page.getByTestId('admin-sidebar')
+  const panel = sidebar.getByTestId('sidebar-panel')
   const footer = panel.getByTestId('sidebar-footer')
   const logout = panel.getByRole('button', { name: 'Cerrar sesión' })
   const logoutText = panel.getByText('Cerrar sesión')
@@ -333,7 +340,7 @@ test('el footer oculta el texto de logout en mini y lo muestra expandido', async
   expect(await footer.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
 
   await panel.hover()
-  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(278)
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeGreaterThanOrEqual(279)
   await expect(logoutText).toBeVisible()
   await expect(toggle).toBeVisible()
   const [logoutBox, toggleBox] = await Promise.all([logout.boundingBox(), toggle.boundingBox()])
@@ -347,13 +354,14 @@ test('la navegación por teclado funciona sin expandir la sidebar', async ({ pag
   await page.goto('/app/admin')
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
 
-  const panel = page.getByTestId('sidebar-panel')
+  const sidebar = page.getByTestId('admin-sidebar')
+  const panel = sidebar.getByTestId('sidebar-panel')
 
   await page.keyboard.press('Tab')
   const dashboard = panel.getByRole('link', { name: 'Dashboard' })
   await expect(dashboard).toBeFocused()
   expect(await dashboard.evaluate((element) => element.matches(':focus-visible'))).toBe(true)
-  expect((await panel.boundingBox()).width).toBeLessThanOrEqual(74)
+  expect((await sidebar.boundingBox()).width).toBeLessThanOrEqual(73)
 
   await page.keyboard.press('Tab')
   const workers = panel.getByRole('link', { name: 'Trabajadores' })
@@ -361,7 +369,7 @@ test('la navegación por teclado funciona sin expandir la sidebar', async ({ pag
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(/\/app\/admin\/workers$/)
   await expect(workers).toBeFocused()
-  expect((await panel.boundingBox()).width).toBeLessThanOrEqual(74)
+  expect((await sidebar.boundingBox()).width).toBeLessThanOrEqual(73)
   await expect(panel.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Activar modo oscuro' })).toBeVisible()
 })
@@ -374,13 +382,14 @@ test.describe('sidebar en dispositivo táctil de escritorio', () => {
     await page.goto('/app/admin')
     await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
 
-    const panel = page.getByTestId('sidebar-panel')
-    const panelBox = await panel.boundingBox()
-    expect(panelBox.width).toBeGreaterThanOrEqual(278)
-    expect(panelBox.width).toBeLessThanOrEqual(282)
+    const sidebar = page.getByTestId('admin-sidebar')
+    const panel = sidebar.getByTestId('sidebar-panel')
+    const sidebarBox = await sidebar.boundingBox()
+    expect(sidebarBox.width).toBeGreaterThanOrEqual(279)
+    expect(sidebarBox.width).toBeLessThanOrEqual(281)
 
     const workspaceBox = await page.getByTestId('admin-workspace').boundingBox()
-    expect(workspaceBox.x).toBeGreaterThan(panelBox.x + panelBox.width)
+    expect(workspaceBox.x).toBeGreaterThan(sidebarBox.x + sidebarBox.width)
     await expect(panel.getByTestId('sidebar-brand').getByText('Gestión documental')).toBeVisible()
   })
 })

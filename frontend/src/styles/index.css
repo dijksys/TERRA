@@ -146,6 +146,24 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Oculta únicamente la representación visual; no altera overflow ni scroll. */
+  html,
+  body,
+  #root,
+  #root *,
+  body * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  #root::-webkit-scrollbar,
+  #root *::-webkit-scrollbar,
+  body *::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-focus-ring;
   }
@@ -349,22 +367,9 @@
   }
 }
 
-@layer utilities {
-  .admin-scroll-container,
-  .scrollbar-hidden,
-  .table-wrap {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .admin-scroll-container::-webkit-scrollbar,
-  .scrollbar-hidden::-webkit-scrollbar,
-  .table-wrap::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
-  }
-}
+/* Las clases .admin-scroll-container, .scrollbar-hidden y .table-wrap se
+   conservan como marcadores semánticos de contenedores con scroll; la
+   ocultación visual es global para el documento y los portales de Radix. */
 
 /* Ajustes puntuales de la escala slate que se usa como borde o texto. */
 .dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),

@@ -42,36 +42,40 @@ geometría, hover, contracción, teclado, roles, tema y drawer están en Playwri
 
 ## Scrollbars invisibles
 
-`.scrollbar-hidden` es la utilidad global para ocultar visualmente la barra de
-desplazamiento sin alterar el scroll. `.admin-scroll-container` se conserva por
-compatibilidad y comparte la misma implementación.
+La barra de desplazamiento se oculta globalmente en el documento de TERRA,
+incluidos `html`, `body`, `#root`, sus descendientes y los portales de Radix que
+se montan directamente en `body`:
 
 ```css
-.admin-scroll-container,
-.scrollbar-hidden,
-.table-wrap {
+html,
+body,
+#root,
+#root *,
+body * {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-.admin-scroll-container::-webkit-scrollbar,
-.scrollbar-hidden::-webkit-scrollbar,
-.table-wrap::-webkit-scrollbar {
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+#root *::-webkit-scrollbar,
+body *::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
 ```
 
-Aplicarla solo a contenedores propios de TERRA que realmente tengan
-`overflow-y-auto`, `overflow-x-auto` o equivalente. No cambia el overflow, no
-bloquea rueda, gestos táctiles, teclado ni `scrollTop`/`scrollLeft`. Se usa en
-workspace, navegación lateral, modales, política, disclosure de Drive, textarea,
-viewport del Select y `.table-wrap`.
+No se modifica `overflow`, no se bloquea rueda, gestos táctiles, teclado ni
+`scrollTop`/`scrollLeft`. Las clases `.admin-scroll-container`,
+`.scrollbar-hidden` y `.table-wrap` se conservan como marcadores semánticos de
+los contenedores propios de TERRA con scroll.
 
 La verificación combina estilos calculados y desplazamiento físico en
-`frontend/tests/e2e/scrollbar-visibility.spec.js`. No aplicar una regla global
-indiscriminada a elementos de terceros ni a contenedores sin scroll real.
+`frontend/tests/e2e/scrollbar-visibility.spec.js`. No se oculta el scroll de
+componentes que no lo tienen ni se introducen contenedores desplazables
+artificiales.
 
 ## Edición en vivo
 

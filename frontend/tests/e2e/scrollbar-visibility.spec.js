@@ -149,6 +149,88 @@ async function scrollVertically(locator) {
   expect(scrolled).toBeGreaterThan(0)
 }
 
+test('viewport, body, #root y descendientes ocultan la barra global', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await mockApi(page)
+  await page.goto('/app/admin')
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+
+  const styles = await page.evaluate(() => {
+    const measure = (element) => ({
+      scrollbarWidth: getComputedStyle(element).scrollbarWidth,
+      webkitScrollbar: getComputedStyle(element, '::-webkit-scrollbar').display,
+    })
+    return {
+      html: measure(document.documentElement),
+      body: measure(document.body),
+      root: measure(document.getElementById('root')),
+      descendant: measure(document.querySelector('#root main')),
+    }
+  })
+
+  for (const style of Object.values(styles)) {
+    expect(style.scrollbarWidth).toBe('none')
+    expect(style.webkitScrollbar).toBe('none')
+  }
+
+  const cssSource = await page.request.get(`${new URL(page.url()).origin}/src/styles/index.css`)
+  expect(await cssSource.text()).toContain('-ms-overflow-style')
+
+  const result = await page.evaluate(async () => {
+    const probe = document.createElement('div')
+    probe.style.height = '1800px'
+    document.body.appendChild(probe)
+    const before = {
+      scrollHeight: document.documentElement.scrollHeight,
+      clientHeight: document.documentElement.clientHeight,
+    }
+    window.scrollTo(0, 120)
+    await new Promise((resolve) => requestAnimationFrame(resolve))
+    const scrollY = window.scrollY
+    window.scrollTo(0, 0)
+    probe.remove()
+    return { before, scrollY }
+  })
+
+  expect(result.before.scrollHeight).toBeGreaterThan(result.before.clientHeight)
+  expect(result.scrollY).toBeGreaterThan(0)
+})
+
+test('los portales fuera de #root ocultan la barra y conservan scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await mockApi(page)
+  await page.goto('/app/admin')
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+
+  const result = await page.evaluate(() => {
+    const portal = document.createElement('div')
+    portal.style.cssText = 'position:fixed;left:0;top:0;width:120px;height:90px;overflow-y:auto;'
+    const content = document.createElement('div')
+    content.style.height = '600px'
+    content.textContent = 'Contenido de portal'
+    portal.appendChild(content)
+    document.body.appendChild(portal)
+
+    const style = getComputedStyle(portal)
+    const webkitScrollbar = getComputedStyle(portal, '::-webkit-scrollbar').display
+    const metrics = {
+      scrollbarWidth: style.scrollbarWidth,
+      webkitScrollbar,
+      scrollHeight: portal.scrollHeight,
+      clientHeight: portal.clientHeight,
+    }
+    portal.scrollTop = 180
+    metrics.scrollTop = portal.scrollTop
+    portal.remove()
+    return metrics
+  })
+
+  expect(result.scrollHeight).toBeGreaterThan(result.clientHeight)
+  expect(result.scrollbarWidth).toBe('none')
+  expect(result.webkitScrollbar).toBe('none')
+  expect(result.scrollTop).toBeGreaterThan(0)
+})
+
 test('workspace y navegación ocultan la barra y conservan scroll vertical', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 500 })
   await mockApi(page)
@@ -248,6 +330,28 @@ test('política, textarea y select usan la utilidad global', async ({ page }) =>
   expect(viewportState.overflowY).toBe('auto')
   expect(viewportState.scrollHeight).toBeGreaterThan(viewportState.clientHeight)
   await scrollVertically(viewport)
+})
+
+test('el drawer móvil conserva scroll vertical sin barra', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 500 })
+  await mockApi(page)
+  await page.goto('/app/admin')
+  await page.getByLabel('Abrir menú').click()
+
+  const drawer = page.getByTestId('admin-drawer')
+  await expect(drawer).toBeVisible()
+  const navigation = drawer.locator('.app-sidebar-navigation')
+  await navigation.evaluate((element) => {
+    const block = document.createElement('div')
+    block.style.height = '900px'
+    element.appendChild(block)
+  })
+
+  const state = await expectHiddenScrollbar(navigation)
+  expect(state.overflowY).toBe('auto')
+  expect(state.scrollHeight).toBeGreaterThan(state.clientHeight)
+  await scrollVertically(navigation)
+  await expect(drawer.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible()
 })
 
 test('el disclosure de Google Drive conserva scroll sin barra', async ({ page }) => {
