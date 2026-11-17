@@ -1,0 +1,404 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
+  --surface-tertiary: #ffffff;
+  --card: #ffffff;
+  --shell: #f1f5f9;
+  --table-head: #f8fafc;
+  --border: #e2e8f0;
+  --muted: #f8fafc;
+  --muted-foreground: #94a3b8;
+  --primary: #047857;
+  --primary-foreground: #ffffff;
+  --sidebar-background: #ffffff;
+  --sidebar-foreground: #0f172a;
+  --input-background: #ffffff;
+  --input-border: #cbd5e1;
+  --focus-ring: #059669;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #000000;
+  --foreground: #ffffff;
+  --surface: #080808;
+  --surface-secondary: #101010;
+  --surface-tertiary: #181818;
+  --card: #101010;
+  --shell: #000000;
+  --table-head: #181818;
+  --border: #262626;
+  --muted: #171717;
+  --muted-foreground: #a3a3a3;
+  --primary: #047857;
+  --primary-foreground: #ffffff;
+  --sidebar-background: #050505;
+  --sidebar-foreground: #ffffff;
+  --input-background: #080808;
+  --input-border: #5c5c5c;
+  --focus-ring: #10b981;
+
+  /* Escala slate reinterpretada sobre negro puro. */
+  --color-slate-50: var(--surface-secondary);
+  --color-slate-100: var(--muted);
+  --color-slate-200: var(--border);
+  --color-slate-300: var(--input-border);
+  --color-slate-400: var(--muted-foreground);
+  --color-slate-500: #b8b8b8;
+  --color-slate-600: #d4d4d4;
+  --color-slate-700: #e5e5e5;
+  --color-slate-800: #f2f2f2;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #000000;
+
+  /* Verde institucional: fondos profundos, acentos luminosos. */
+  --color-brand-50: #052e21;
+  --color-brand-100: #064e3b;
+  --color-brand-500: #34d399;
+  --color-brand-600: #10b981;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+
+  /* Estados: fondos tintados y texto de alto contraste. */
+  --color-emerald-50: #052e21;
+  --color-emerald-100: #064e3b;
+  --color-emerald-200: #065f46;
+  --color-emerald-600: #10b981;
+  --color-emerald-700: #34d399;
+  --color-emerald-800: #6ee7b7;
+  --color-emerald-900: #a7f3d0;
+
+  --color-amber-50: #2a1c05;
+  --color-amber-100: #3b2a08;
+  --color-amber-200: #5a400b;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #fbbf24;
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+
+  --color-red-50: #2a0f14;
+  --color-red-100: #3b1119;
+  --color-red-200: #5a1a24;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #f87171;
+  --color-red-700: #fca5a5;
+  --color-red-800: #fecaca;
+  --color-red-900: #fee2e2;
+
+  --color-orange-50: #2a1608;
+  --color-orange-100: #3b1f0b;
+  --color-orange-200: #5a2f12;
+  --color-orange-800: #fed7aa;
+  --color-orange-900: #ffedd5;
+
+  --color-sky-50: #08202a;
+  --color-sky-100: #0b2a38;
+  --color-sky-200: #124457;
+  --color-sky-800: #bae6fd;
+}
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-surface-tertiary: var(--surface-tertiary);
+  --color-card: var(--card);
+  --color-shell: var(--shell);
+  --color-table-head: var(--table-head);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-sidebar-background: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-input-background: var(--input-background);
+  --color-input-border: var(--input-border);
+  --color-focus-ring: var(--focus-ring);
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+    font-family: var(--font-sans);
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-focus-ring;
+  }
+  .dark option {
+    background-color: var(--surface-tertiary);
+    color: var(--foreground);
+  }
+}
+
+@layer components {
+  .card {
+    @apply min-w-0 rounded-2xl border border-border bg-card shadow-sm;
+  }
+  .card-body {
+    @apply p-5 sm:p-6;
+  }
+  .btn {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold
+      text-white transition hover:bg-brand-800 active:bg-brand-900 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-surface px-4 py-2
+      text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2
+      text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold
+      text-slate-600 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .input {
+    @apply block w-full min-w-0 rounded-xl border border-input-border bg-input-background px-3 py-2 text-sm text-slate-900
+      placeholder:text-muted-foreground focus:border-brand-600 focus:ring-0 disabled:cursor-not-allowed disabled:bg-slate-100
+      disabled:text-slate-500;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-slate-700;
+  }
+  .menu-content.terra-date-picker-panel {
+    @apply p-3;
+    min-width: 18rem;
+  }
+  .terra-calendar.rdp-root {
+    --rdp-accent-color: var(--primary);
+    --rdp-accent-background-color: var(--color-brand-50);
+    @apply text-slate-700;
+  }
+  .terra-calendar .rdp-months {
+    @apply m-0;
+  }
+  .terra-calendar .rdp-month_caption {
+    @apply px-2 pb-2 text-sm font-semibold text-slate-900;
+  }
+  .terra-calendar .rdp-nav {
+    @apply gap-1;
+  }
+  .terra-calendar .rdp-button_previous,
+  .terra-calendar .rdp-button_next {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500;
+  }
+  .terra-calendar .rdp-button_previous:hover,
+  .terra-calendar .rdp-button_next:hover {
+    @apply bg-brand-50 text-brand-700;
+  }
+  .terra-calendar .rdp-button_previous:focus-visible,
+  .terra-calendar .rdp-button_next:focus-visible,
+  .terra-calendar .rdp-day_button:focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-brand-600;
+  }
+  .terra-calendar .rdp-chevron {
+    fill: currentColor;
+  }
+  .terra-calendar .rdp-weekday {
+    @apply text-xs font-medium text-slate-500;
+  }
+  .terra-calendar .rdp-day {
+    @apply p-0;
+  }
+  .terra-calendar .rdp-day_button {
+    @apply mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-sm text-slate-700 transition;
+  }
+  .terra-calendar .rdp-day_button:hover {
+    @apply bg-brand-50 text-brand-700;
+  }
+  .terra-calendar .rdp-selected .rdp-day_button {
+    @apply bg-brand-700 text-white hover:bg-brand-800;
+  }
+  .terra-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
+    @apply text-brand-700 ring-1 ring-brand-100;
+  }
+  .terra-calendar .rdp-outside .rdp-day_button {
+    @apply text-slate-300;
+  }
+  .terra-calendar .rdp-disabled .rdp-day_button {
+    @apply cursor-not-allowed opacity-35;
+  }
+  .terra-calendar .rdp-disabled .rdp-day_button:hover {
+    @apply bg-transparent text-slate-700;
+  }
+  .disclosure {
+    @apply rounded-2xl border border-border bg-surface-secondary;
+  }
+  .disclosure-summary {
+    @apply flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm font-medium
+      text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+      focus-visible:outline-brand-600;
+  }
+  .disclosure-body {
+    @apply border-t border-border px-4 py-3;
+  }
+  .menu-trigger {
+    @apply inline-flex min-h-10 w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-input-border
+      bg-input-background px-3 py-2 text-sm font-medium text-slate-700 transition
+      hover:border-slate-400 focus-visible:border-brand-600 focus-visible:outline-none focus-visible:ring-2
+      focus-visible:ring-brand-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500;
+  }
+  .menu-trigger[data-state="open"] {
+    @apply border-brand-600 ring-2 ring-brand-100;
+  }
+  .menu-trigger-error {
+    @apply border-red-400 focus-visible:border-red-500 focus-visible:ring-red-100;
+  }
+  .menu-content {
+    @apply z-[80] min-w-48 overflow-hidden rounded-2xl border border-border bg-surface-tertiary p-1.5 shadow-xl;
+    max-width: min(24rem, calc(100vw - 1rem));
+    animation: menu-in 120ms ease-out;
+  }
+  .menu-content:focus-visible {
+    @apply outline-none;
+  }
+  .menu-item {
+    @apply relative flex min-h-10 cursor-pointer select-none items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium
+      text-slate-700 outline-none transition data-[disabled]:pointer-events-none data-[disabled]:opacity-45;
+  }
+  .menu-item[data-highlighted] {
+    @apply bg-brand-50 text-emerald-700;
+  }
+  .menu-item[data-state="checked"] {
+    @apply bg-brand-50 text-emerald-700;
+  }
+  .menu-item-destructive {
+    @apply text-red-700;
+  }
+  .menu-item-destructive[data-highlighted] {
+    @apply bg-red-50 text-red-800;
+  }
+  .menu-label {
+    @apply px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400;
+  }
+  .menu-separator {
+    @apply my-1.5 h-px bg-slate-200;
+  }
+  .select-content {
+    min-width: var(--radix-select-trigger-width, 12rem);
+    max-height: min(20rem, var(--radix-select-content-available-height, 20rem));
+  }
+  .select-viewport {
+    @apply max-h-80 overflow-y-auto;
+  }
+  .select-item {
+    @apply pr-9;
+  }
+  .select-indicator {
+    @apply absolute right-2.5 inline-flex h-4 w-4 items-center justify-center text-brand-700;
+  }
+  .field-error {
+    @apply mt-1 text-sm text-red-600;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .table-wrap {
+    @apply overflow-x-auto rounded-xl border border-border;
+    /* Evita que el ancho de la tabla se propague al documento en Chromium. */
+    contain: layout;
+  }
+  .table {
+    @apply min-w-full divide-y divide-slate-200 text-sm;
+  }
+  .table thead {
+    @apply bg-table-head text-left text-xs font-semibold uppercase tracking-wide text-slate-500;
+  }
+  .table th {
+    @apply whitespace-nowrap px-4 py-3;
+  }
+  .table td {
+    @apply px-4 py-3 align-middle;
+  }
+  .table tbody {
+    @apply divide-y divide-slate-100 bg-surface;
+  }
+  .code-block {
+    background-color: #0a0a0a;
+    color: #e5e5e5;
+  }
+}
+
+@layer utilities {
+  .admin-scroll-container {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .admin-scroll-container::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Ajustes puntuales de la escala slate que se usa como borde o texto. */
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border);
+}
+
+.dark .border-slate-100 {
+  border-color: var(--border);
+}
+
+/* Los tonos brand-600..900 se usan como texto sobre superficies oscuras. */
+.dark .text-brand-600,
+.dark .text-brand-700 {
+  color: #34d399;
+}
+
+.dark .text-brand-800 {
+  color: #6ee7b7;
+}
+
+.dark .text-brand-900 {
+  color: #a7f3d0;
+}
+
+.dark .hover\:text-brand-800:hover {
+  color: #6ee7b7;
+}
+
+.dark .hover\:text-brand-900:hover {
+  color: #a7f3d0;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -1,0 +1,92 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { api } from '../services/api'
+import { isAdministrativeAccount, isWorkerAccount } from '../features/auth/roles'
+
+const AuthContext = createContext(null)
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null)
+  const [permissions, setPermissions] = useState([])
+  const [mustRotate, setMustRotate] = useState(false)
+  const [hasLocalCredentials, setHasLocalCredentials] = useState(false)
+  const [pendingProfile, setPendingProfile] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  const clear = useCallback(() => {
+    setUser(null)
+    setPermissions([])
+    setMustRotate(false)
+    setHasLocalCredentials(false)
+    setPendingProfile(false)
+  }, [])
+
+  const apply = useCallback((data) => {
+    setUser(data.user)
+    setPermissions(data.permissions || [])
+    setMustRotate(Boolean(data.must_rotate_password))
+    setHasLocalCredentials(Boolean(data.has_local_credentials))
+    setPendingProfile(Boolean(data.pending_profile))
+  }, [])
+
+  const refresh = useCallback(async () => {
+    try {
+      const data = await api.get('/auth/me')
+      apply(data)
+      setError(null)
+      return data
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) {
+        clear()
+      } else {
+        setError(err)
+      }
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [apply, clear])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // Puede que la sesión ya no exista; el estado local se limpia de todos modos.
+    } finally {
+      clear()
+    }
+  }, [clear])
+
+  const value = useMemo(
+    () => ({
+      user,
+      permissions,
+      mustRotate,
+      hasLocalCredentials,
+      pendingProfile,
+      loading,
+      error,
+      refresh,
+      apply,
+      logout,
+      clear,
+      isAdmin: Boolean(user?.roles?.includes('admin')),
+      isAdministrative: isAdministrativeAccount(user),
+      isWorker: isWorkerAccount(user),
+      can: (permission) => permissions.includes(permission),
+    }),
+    [user, permissions, mustRotate, hasLocalCredentials, pendingProfile, loading, error, refresh, apply, logout, clear],
+  )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) throw new Error('useAuth must be used inside AuthProvider')
+  return context
+}

@@ -1,0 +1,136 @@
+# Desarrollo de frontend
+
+El contenedor `web` ejecuta el servidor de desarrollo de Vite con reemplazo de módulos en caliente (HMR).
+
+## Acceso
+
+```text
+http://localhost:8080
+```
+
+El puerto `8080` del host se asigna al `5173` de Vite dentro del contenedor. Cambie el puerto
+del host con `WEB_PORT` en `.env`.
+
+## Stack
+
+- React 19
+- Vite 8
+- Tailwind CSS 4
+- Iconos Lucide
+- React Router
+- Vitest + React Testing Library
+- Playwright + Chromium dentro del contenedor
+
+## Edición en vivo
+
+Los archivos fuente bajo `src/`, `public/`, `tests/` y las configuraciones de desarrollo se montan mediante bind en `/app`. Los cambios en `src/` se reflejan a través del HMR de Vite.
+
+`node_modules` se instala en la imagen web con `npm ci` durante el build y no se monta desde el host. Un `frontend/node_modules` local no forma parte del flujo operativo de TERRA; si existe, es un residuo de una instalación manual en el host y no afecta a Docker.
+
+`npm`, Vite, Vitest y Playwright se ejecutan dentro del contenedor `web`:
+
+```bash
+./terra shell web                                  # shell interactiva
+docker compose exec -T web npm run test:unit       # comando puntual
+docker compose exec -T web npm run lint
+```
+
+Los manifiestos `package.json` y `package-lock.json` se montan en `/app` como solo lectura.
+`node_modules` permanece dentro de la imagen y se instala con `npm ci`; no se monta desde el host.
+
+`./terra up` reconstruye la imagen web con caché antes de iniciar o recrear web, por lo que
+las dependencias declaradas quedan sincronizadas. No es necesario ejecutar `npm install` en
+el host.
+
+```bash
+./terra up                       # valida/actualiza web y recrea el contenedor
+./terra up --recreate=web        # reconstruye web y lo recrea
+./terra build web                # construcción explícita
+./terra restart web              # solo reinicia el proceso; no actualiza dependencias
+```
+
+No se requiere Node.js en el host; solo forma parte de la imagen web.
+
+## Cliente de Vite y React Refresh
+
+El doctor verifica que `/@vite/client` se sirva como JavaScript, que React Refresh
+esté disponible y que la aplicación monte en `#root`:
+
+```bash
+./terra doctor
+./terra test e2e
+```
+
+Si `/@vite/client` devuelve HTML, el contenedor web no puede leer sus dependencias.
+`./terra doctor` valida que `node_modules` resuelva todas las dependencias directas de
+`package.json` y que `@radix-ui/react-select` pueda resolverse. Reconstruya y recree:
+
+```bash
+./terra build web
+./terra up --recreate=web
+./terra doctor
+```
+
+## Proxy de API y WebSocket
+
+`vite.config.js` redirige `/api` a `http://api:8080`. Esto incluye REST y WebSocket. No use `localhost` para el tráfico entre contenedores.
+
+## Selectores de fecha
+
+Use `DatePicker` de `src/components/DatePicker.jsx` para cualquier fecha de formulario o
+filtro. No agregue `input type="date"` ni otra librería de calendario.
+
+```jsx
+<DatePicker
+  id="jobs-from"
+  value={from}
+  onChange={(value) => setFrom(value)}
+  max={to || undefined}
+  aria-label="Desde"
+/>
+```
+
+- El valor es `YYYY-MM-DD` o `''`; la fecha mostrada es `dd/MM/yyyy`.
+- Las utilidades `parseDateOnly`, `formatDateOnly`, `formatDateDisplay`,
+  `isValidDateOnly` e `isValidDateRange` están en `src/utils/date-only.js`.
+- Nunca use `new Date('YYYY-MM-DD')` ni `toISOString()` para el valor del formulario.
+- `min` y `max` son inclusivos. Para rangos, límite Desde con `max={to}` y Hasta con
+  `min={from}` y bloquee la consulta con `isValidDateRange(from, to)`.
+- El panel se monta en portal, por lo que no lo recorta `overflow-hidden`; los estilos
+  del calendario están aislados en `.terra-calendar`.
+- Es accesible con teclado (Enter/Space, flechas, Escape) y anuncia el día seleccionado.
+
+## Pruebas de frontend
+
+```bash
+./terra test frontend unit
+./terra test frontend integration
+./terra test e2e
+./terra test frontend       # lint + unitarias + integración + build + cobertura
+```
+
+Las pruebas se ejecutan dentro del contenedor `web`:
+
+```bash
+docker compose exec -T web npm run test:unit
+docker compose exec -T web npm run test:integration
+docker compose exec -T web npm run test:e2e
+```
+
+## Shell y compilación
+
+```bash
+./terra shell web
+./terra build
+```
+
+La salida del build dentro del contenedor se escribe en `/tmp` durante las pruebas; el host
+no se contamina con artefactos compilados.
+
+## Lint
+
+```bash
+docker compose exec -T web npm run lint
+```
+
+No se requiere ninguna instalación de Node en el host.

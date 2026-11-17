@@ -1,0 +1,157 @@
+# Pipeline de descarga
+
+## Exploración interactiva
+
+El selector de `/app/admin/downloads` consulta Google Drive como fuente de verdad:
+
+```mermaid
+flowchart LR
+  UI[FolderPicker] -->|GET /drive/items?parentId| API[Backend Go]
+  API -->|files.list + pageToken| G[Google Drive API v3]
+  G -->|archivos y carpetas| API
+  API -->|UpsertChildren transaccional| DB[(PostgreSQL drive_nodes)]
+  API -->|items + next_page_token| UI
+```
+
+- Solo se consulta el contenido inmediato de la carpeta actual.
+- La paginación usa `nextPageToken` opaco; no se recorre Mi unidad completo.
+- Los archivos descargables se seleccionan como raíces individuales; también se combinan con carpetas.
+- Los atajos se muestran como referencias y no se recorren.
+- Si Google falla, la UI muestra el error y no presenta metadatos antiguos como actuales.
+- PostgreSQL conserva la última observación para el pipeline; no sustituye a Drive.
+
+## Estados
+
+```mermaid
+stateDiagram-v2
+    [*] --> queued
+    queued --> scanning: worker reclama
+    scanning --> downloading: escaneo completo
+    downloading --> completed: sin fallos pendientes
+    downloading --> partially_completed: fallos + completados
+    downloading --> failed: sin completados
+    queued --> cancelled: cancelación
+    scanning --> cancel_requested: cancelación
+    downloading --> cancel_requested: cancelación
+    cancel_requested --> cancelled: worker finaliza
+    scanning --> waiting_authorization: token inválido / política
+    downloading --> waiting_authorization: token inválido
+    waiting_authorization --> scanning: reconexión + política vigente
+    failed --> queued: retry-failed
+    partially_completed --> queued: retry-failed
+```
+
+Trabajo: `queued`, `scanning`, `downloading`, `completed`, `partially_completed`, `failed`,
+`waiting_authorization`, `cancel_requested`, `cancelled`.
+
+Elemento: `pending`, `downloading`, `completed`, `skipped`, `retrying`, `failed`, `cancelled`.
+
+## Reclamo de trabajos
+
+```sql
+WITH candidate AS (
+  SELECT j.id
+  FROM download_jobs j
+  LEFT JOIN drive_connections c ON c.id = j.drive_connection_id
+  WHERE j.status = 'queued'
+     OR (j.status IN ('scanning','downloading','cancel_requested')
+         AND (j.lease_expires_at IS NULL OR j.lease_expires_at < now()))
+     OR (j.status = 'waiting_authorization'
+         AND c.status = 'connected'
+         AND c.refresh_token_ciphertext IS NOT NULL
+         AND c.policy_consent_version = (SELECT version FROM policy_versions ORDER BY published_at DESC LIMIT 1))
+  ORDER BY j.created_at
+  FOR UPDATE OF j SKIP LOCKED
+  LIMIT 1
+)
+UPDATE download_jobs ...
+```
+
+## Escaneo
+
+1. Resuelve `Mi unidad` completa, carpetas seleccionadas y archivos individuales.
+2. BFS por carpetas; `nextPageToken` se sigue hasta agotar resultados.
+3. Cada hijo se registra en `drive_nodes` + `drive_node_parents`.
+4. Carpetas: se crean localmente y se encolan.
+5. Archivos de carpetas: se crea un `download_item` (pendiente u omitido con razón).
+6. Archivos raíz individuales: se consulta `files.get`, se reconstruye su cadena
+   `PathToRoot`, se crean los directorios padre y se encola un único item.
+7. Los archivos cubiertos por una carpeta seleccionada se descartan al normalizar y
+   también se protegen en el escaneo.
+8. Carpetas vacías quedan creadas.
+9. `scan_completed_at` marca el checkpoint; un reinicio no reescanea.
+
+`selected_items` persiste carpetas en `download_job_roots` y archivos en
+`download_job_file_roots`, en la misma transacción que el trabajo. Los trabajos
+históricos con `selected_folders` siguen funcionando.
+
+Nombres repetidos: sufijo determinista `~<prefijo del ID>`; la identidad sigue siendo el ID.
+Atajos: se registran como referencia omitida, sin recorrer el destino, evitando ciclos y copias.
+La extensión de un nativo la determina el MIME de exportación, nunca el nombre original.
+
+Ver [file-formats.md](../development/file-formats.md) para la tabla de formatos y
+exportaciones admitidas.
+
+## Descarga
+
+- Cola de elementos `pending`/`retrying` cuyo `next_retry_at` ya venció.
+- Pool de hasta `min(WORKER_CONCURRENCY, WORKER_PER_ACCOUNT_CONCURRENCY)`.
+- `AccountLimiter` espacia **inicios** por conexión (`DOWNLOAD_MIN_INTERVAL_MS`), compartido.
+- Binarios: `files.get` con media; se conservan bytes, nombre y extensión originales.
+- Nativos: `files.export` con el formato predeterminado (DOCX, XLSX, PPTX, PDF de
+  Drawings, JSON de Apps Script). Google Forms se serializa con `forms.get` como
+  `Nombre.form.json`; no incluye respuestas de participantes.
+- Google Vids queda explícitamente no soportado: requiere un flujo asíncrono propio.
+- Antes: `capabilities.canDownload`, tipo soportado, límite de archivo y capacidad.
+- Streaming a `.part` en el directorio destino, SHA-256 + MD5, límite de bytes.
+- Verificación de longitud y checksum; `fsync`, cierre y `rename` atómico.
+- `stored_files` se inserta en la misma transacción que el estado `completed`.
+
+## Reintentos
+
+| Clasificación | Acción |
+|---|---|
+| 429 / quota / 5xx / red / checksum / transferencia incompleta | `retrying` con backoff exponencial + jitter, respetando `Retry-After` |
+| 401 / `invalid_grant` | conexión `reauthorization_required`; trabajo `waiting_authorization`; elemento vuelve a `pending` |
+| 403 sin permiso, no descargable, formato no soportado, 404 | `skipped` con código y razón |
+| Agotar 5 intentos | `failed` con último error |
+| Disco lleno / límite de capacidad | detener, fallar pendientes y finalizar |
+
+Un error individual no detiene el trabajo; al final:
+
+- todos correctos → `completed`
+- fallos + completados → `partially_completed`
+- solo fallos → `failed`
+- pendientes inesperados → no se declara completado (`incomplete_items`)
+
+## Cancelación
+
+- `POST /download-jobs/{id}/cancel` marca `cancel_requested` (o `cancelled` si aún está en cola).
+- El heartbeat del worker lee la marca y cancela el `context`.
+- La transferencia en curso se aborta; el `.part` se elimina.
+- Se cancelan pendientes y el trabajo finaliza `cancelled`.
+
+## Recuperación
+
+- Lease vencida → otro reclamo continúa desde `scan_completed_at`.
+- Los elementos que quedaron en `downloading` se reencolan como `pending` de forma
+  transaccional; nunca se cuentan como completados.
+- El snapshot de progreso limpia `in_flight_bytes` y `active_downloads` del worker anterior.
+- Los elementos ya completados no se vuelven a descargar (`UNIQUE(job_id, drive_node_id)` + estado).
+- El escaneo es idempotente por upserts.
+- Un lease perdido no finaliza el trabajo: el nuevo propietario lo retoma.
+
+## Progreso y tiempo real
+
+- El worker instrumenta cada escritura aceptada por el destino y mantiene bytes en vuelo en memoria.
+- `download_job_progress` guarda el snapshot agregado con revisión incremental.
+- `downloaded_bytes` sigue significando bytes completados; `transferred_bytes` suma completados y en vuelo.
+- Las actualizaciones frecuentes no crean filas en `job_events`; solo los cambios de estado e
+  hitos de elementos son durables.
+- PostgreSQL notifica `terra_progress` y `terra_events`; la API consulta el estado persistido
+  y distribuye por `/api/v1/realtime`.
+- El frontend mantiene REST como carga inicial y respaldo, y usa una única conexión WebSocket
+  por sesión con resuscripción y backoff.
+- Las descargas de documentos se resuelven con un enlace nativo a
+  `/api/v1/files/{stored_file_id}/content`; el navegador recibe el archivo directamente y no
+  se carga en memoria JavaScript mediante Blob.
