@@ -255,6 +255,9 @@ test('el selector es cuadrado, accesible y comparte fila con cerrar sesión en a
     }
     const toggle = page.getByRole('button', { name: 'Activar modo oscuro' })
     const logout = page.getByRole('button', { name: 'Cerrar sesión' })
+    const panel = page.getByTestId('sidebar-panel')
+    await panel.hover()
+    await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(240)
     await expect(toggle).toBeVisible()
     await expect(logout).toBeVisible()
 

@@ -38,13 +38,19 @@ frontend/src/
 ## Layout administrativo y del trabajador
 
 El panel administrativo (`AppLayout` cuando el rol es `admin`) usa dos superficies
-sobre un fondo gris azulado: sidebar de 210–232 px (`clamp(210px,17vw,232px)`) y
-workspace flexible. El shell mide `100dvh` y `max-w-[1920px]`, con 16 px de margen
-exterior: ocupa todo el ancho en 1366–1920 px y se limita en monitores ultrapanorámicos
-para no estirar la interfaz sin control. El documento nunca scrollea; el único
-propietario del scroll vertical es `admin-scroll` (`overflow-y: auto`, sin barra
-visible vía `.admin-scroll-container`). La sidebar es un flex item `min-w-0` para que
-los nombres largos no impongan su `min-content`.
+sobre un fondo gris azulado: un rail lateral de 76 px y un workspace flexible. El rail
+reserva el ancho contraído y contiene un panel flotante de 76 px que se expande a
+248 px por `:hover` en punteros finos o por `:has(:focus-visible)` para teclado. La
+expansión se dibuja por encima del workspace, sin cambiar su ancho ni provocar reflow.
+En dispositivos táctiles de escritorio el panel se muestra expandido; en móvil se
+mantiene el drawer. Al navegar, el foco se traslada al contenedor de contenido para que
+la sidebar no quede fijada por un enlace enfocado. El shell mide `100dvh` y
+`max-w-[1920px]`, con 16 px de margen exterior: ocupa todo el ancho en 1366–1920 px y
+se limita en monitores ultrapanorámicos para no estirar la interfaz sin control. El
+documento nunca scrollea; el único propietario del scroll vertical es `admin-scroll`
+(`overflow-y: auto`, sin barra visible vía `.admin-scroll-container`). El rail es un
+flex item fijo; el panel interno se posiciona de forma absoluta para no alterar el
+layout.
 
 La adaptación de contenido usa container queries sobre `main` (`@container`), no solo
 breakpoints de viewport: las cuadrículas del dashboard, de las páginas administrativas
@@ -219,7 +225,7 @@ el respaldo; WebSocket no es autoridad.
 - Tarjetas `rounded-2xl`, formularios consistentes, tablas con scroll horizontal.
 - Iconografía Lucide.
 - Estados de carga, vacío, error, parcial y completado.
-- Navegación lateral fija en escritorio y drawer en móvil.
+- Rail lateral colapsado con expansión flotante por hover o foco visible en escritorio, y drawer en móvil.
 - `:focus-visible` global y etiquetas accesibles.
 
 ## Servidor de desarrollo

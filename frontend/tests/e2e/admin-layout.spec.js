@@ -211,7 +211,7 @@ test('el panel administrativo usa dos superficies separadas y rounded', async ({
   await expect(sidebar).toBeVisible()
   await expect(workspace).toBeVisible()
   await expect(sidebar.getByRole('link', { name: 'Trabajadores' })).toBeVisible()
-  await expect(sidebar.getByText('Cerrar sesión')).toBeVisible()
+  await expect(sidebar.getByRole('button', { name: 'Cerrar sesión' })).toBeVisible()
   await expect(workspace.locator('header').first()).toContainText('Panel administrativo')
   await expect(workspace.locator('header').first()).toContainText('Dashboard')
 
@@ -247,6 +247,108 @@ test('el panel administrativo usa dos superficies separadas y rounded', async ({
     return element.scrollTop
   })
   expect(navScrolled).toBeGreaterThan(0)
+})
+
+test('la sidebar se expande al hover sin mover el workspace y colapsa al salir', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await mockApi(page)
+  await page.goto('/app/admin')
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+
+  const panel = page.getByTestId('sidebar-panel')
+  const workspace = page.getByTestId('admin-workspace')
+  const collapsed = await panel.boundingBox()
+  expect(collapsed.width).toBeGreaterThanOrEqual(72)
+  expect(collapsed.width).toBeLessThanOrEqual(80)
+  const workspaceBefore = await workspace.boundingBox()
+
+  const workersLabel = panel.getByRole('link', { name: 'Trabajadores' }).getByText('Trabajadores')
+  expect(await workersLabel.evaluate((element) => getComputedStyle(element).opacity)).toBe('0')
+
+  await panel.hover()
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(240)
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(260)
+  await expect.poll(() => workersLabel.evaluate((element) => getComputedStyle(element).opacity)).toBe('1')
+  await expect(panel.getByTestId('sidebar-brand').getByText('Gestión documental')).toBeVisible()
+  await expect(panel.getByRole('button', { name: 'Cerrar sesión' })).toContainText('Cerrar sesión')
+  await expect(panel.getByTestId('sidebar-user')).toContainText('Ada Admin')
+
+  const workspaceExpanded = await workspace.boundingBox()
+  expect(Math.abs(workspaceExpanded.x - workspaceBefore.x)).toBeLessThanOrEqual(1)
+  expect(Math.abs(workspaceExpanded.width - workspaceBefore.width)).toBeLessThanOrEqual(1)
+
+  await page.mouse.move(1200, 450)
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(80)
+  const workspaceCollapsed = await workspace.boundingBox()
+  expect(Math.abs(workspaceCollapsed.x - workspaceBefore.x)).toBeLessThanOrEqual(1)
+  expect(Math.abs(workspaceCollapsed.width - workspaceBefore.width)).toBeLessThanOrEqual(1)
+})
+
+test('la sidebar no queda fijada tras navegar con el puntero', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await mockApi(page)
+  await page.goto('/app/admin')
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+
+  const panel = page.getByTestId('sidebar-panel')
+  const scroll = page.getByTestId('admin-scroll')
+
+  await panel.hover()
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(240)
+  await panel.getByRole('link', { name: 'Trabajadores' }).click()
+  await expect(page).toHaveURL(/\/app\/admin\/workers$/)
+  await expect(scroll).toBeFocused()
+
+  await page.mouse.move(1200, 450)
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(80)
+
+  await panel.hover()
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(240)
+  await panel.getByRole('link', { name: 'Trabajadores' }).click()
+  await expect(scroll).toBeFocused()
+
+  await page.mouse.move(1200, 450)
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(80)
+})
+
+test('la sidebar se expande con foco visible de teclado y colapsa al navegar', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await mockApi(page)
+  await page.goto('/app/admin')
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+
+  const panel = page.getByTestId('sidebar-panel')
+  const scroll = page.getByTestId('admin-scroll')
+
+  await page.keyboard.press('Tab')
+  await expect(panel.getByRole('link', { name: 'Dashboard' })).toBeFocused()
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeGreaterThanOrEqual(240)
+
+  await page.keyboard.press('Tab')
+  await expect(panel.getByRole('link', { name: 'Trabajadores' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/app\/admin\/workers$/)
+  await expect(scroll).toBeFocused()
+  await expect.poll(async () => (await panel.boundingBox()).width).toBeLessThanOrEqual(80)
+})
+
+test.describe('sidebar en dispositivo táctil de escritorio', () => {
+  test.use({ hasTouch: true, viewport: { width: 1280, height: 800 } })
+
+  test('se muestra expandida sin depender de hover', async ({ page }) => {
+    await mockApi(page)
+    await page.goto('/app/admin')
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+
+    const panel = page.getByTestId('sidebar-panel')
+    const panelBox = await panel.boundingBox()
+    expect(panelBox.width).toBeGreaterThanOrEqual(240)
+    expect(panelBox.width).toBeLessThanOrEqual(260)
+
+    const workspaceBox = await page.getByTestId('admin-workspace').boundingBox()
+    expect(workspaceBox.x).toBeGreaterThan(panelBox.x + panelBox.width)
+    await expect(panel.getByTestId('sidebar-brand').getByText('Gestión documental')).toBeVisible()
+  })
 })
 
 test('el shell ocupa el ancho disponible y se limita en monitores ultrapanorámicos', async ({ page }) => {
@@ -324,7 +426,7 @@ test('el workspace es el único dueño del scroll en todos los anchos', async ({
 test('las cuadrículas responden al ancho del workspace, no al del viewport', async ({ page }) => {
   await mockApi(page)
 
-  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.setViewportSize({ width: 850, height: 768 })
   await page.goto('/app/admin')
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
   expect((await readLayout(page)).kpiColumns).toBe(2)
@@ -348,7 +450,7 @@ test('PageHeader se apila cuando el workspace es estrecho', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
   expect((await readLayout(page)).pageHeaderDirection).toBe('row')
 
-  await page.setViewportSize({ width: 900, height: 768 })
+  await page.setViewportSize({ width: 768, height: 768 })
   await page.goto('/app/admin')
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
   expect((await readLayout(page)).pageHeaderDirection).toBe('column')

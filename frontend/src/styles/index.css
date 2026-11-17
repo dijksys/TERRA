@@ -392,6 +392,116 @@
   color: #a7f3d0;
 }
 
+/* --------------------------------------------------------------------------
+   Navegación lateral global.
+   El rail reserva 76 px; el panel flotante se expande a 248 px por hover o
+   foco visible sin modificar el ancho del workspace. En táctil de escritorio
+   se muestra expandido y en móvil se conserva el drawer.
+   -------------------------------------------------------------------------- */
+.terra-sidebar-rail {
+  --terra-sidebar-collapsed: 76px;
+  --terra-sidebar-expanded: 248px;
+  width: var(--terra-sidebar-collapsed);
+  flex: 0 0 var(--terra-sidebar-collapsed);
+}
+
+.terra-sidebar-panel--rail {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  z-index: 30;
+  width: var(--terra-sidebar-collapsed);
+  transition: width 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease;
+}
+
+.terra-sidebar-reveal {
+  max-width: 12rem;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease;
+}
+
+.terra-sidebar-group-label {
+  max-height: 2rem;
+  overflow: hidden;
+  transition: max-height 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease, padding 200ms ease;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) {
+    width: var(--terra-sidebar-collapsed);
+  }
+
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) .terra-sidebar-reveal {
+    max-width: 0;
+    opacity: 0;
+  }
+
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) .terra-sidebar-brand {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) .terra-sidebar-link {
+    justify-content: center;
+    gap: 0;
+  }
+
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) .terra-sidebar-user {
+    justify-content: center;
+    gap: 0;
+    padding-inline: 0.375rem;
+  }
+
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) .terra-sidebar-footer-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) .terra-sidebar-logout {
+    flex: none;
+    width: 44px;
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) .terra-sidebar-group-label {
+    max-height: 1px;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+  }
+
+  .terra-sidebar-panel--rail:not(:is(:hover, :has(:focus-visible))) .terra-sidebar-group + .terra-sidebar-group {
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+  }
+
+  .terra-sidebar-panel--rail:is(:hover, :has(:focus-visible)) {
+    width: var(--terra-sidebar-expanded);
+    box-shadow: 0 22px 50px -24px rgb(15 23 42 / 0.38);
+  }
+}
+
+@media (min-width: 768px) and (hover: none), (min-width: 768px) and (pointer: coarse) {
+  .terra-sidebar-rail {
+    width: var(--terra-sidebar-expanded);
+    flex-basis: var(--terra-sidebar-expanded);
+  }
+
+  .terra-sidebar-panel--rail {
+    width: var(--terra-sidebar-expanded);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .terra-sidebar-panel--rail,
+  .terra-sidebar-reveal,
+  .terra-sidebar-group-label {
+    transition: none;
+  }
+}
+
 @keyframes menu-in {
   from {
     opacity: 0;

@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArrowLeftRight,
@@ -114,26 +114,51 @@ function currentSection(groups, pathname, fallback) {
   return match?.label || fallback
 }
 
-function Sidebar({ groups, user, onLogout, onNavigate }) {
+function Sidebar({ groups, user, onLogout, onNavigate, variant = 'rail' }) {
   const idPrefix = useId()
+  const rail = variant === 'rail'
+  const displayName = user?.display_name || user?.email || 'Usuario'
+  const roleLabel = roleLabels[user?.roles?.[0]] || 'Usuario'
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'T'
+
   return (
-    <div className="flex h-full w-full min-w-0 flex-col">
-      <div className="flex items-center gap-3 px-4 py-5">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
-        <div className="min-w-0">
+    <div
+      data-testid={rail ? 'sidebar-panel' : undefined}
+      className={
+        rail
+          ? 'terra-sidebar-panel terra-sidebar-panel--rail flex h-full flex-col rounded-[22px] border border-slate-200 bg-sidebar-background shadow-sm'
+          : 'flex h-full w-full min-w-0 flex-col'
+      }
+    >
+      <div
+        data-testid={rail ? 'sidebar-brand' : undefined}
+        className="terra-sidebar-brand flex items-center gap-3 px-4 py-5"
+      >
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-700 font-bold text-white" aria-hidden="true">T</span>
+        <div className="terra-sidebar-reveal min-w-0">
           <p className="truncate text-sm font-semibold text-slate-900">TERRA</p>
           <p className="truncate text-xs text-slate-500">Gestión documental</p>
         </div>
       </div>
 
-      <nav aria-label="Navegación principal" className="admin-scroll-container min-h-0 flex-1 space-y-4 overflow-y-auto px-3 pb-4">
+      <nav
+        data-testid={rail ? 'sidebar-navigation' : undefined}
+        aria-label="Navegación principal"
+        className="admin-scroll-container min-h-0 flex-1 space-y-4 overflow-y-auto px-3 pb-4"
+      >
         {groups.map((group) => {
           const headingId = `${idPrefix}-${group.id}`
           return (
-            <div key={group.id}>
+            <div key={group.id} className="terra-sidebar-group">
               <h3
                 id={headingId}
-                className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
+                className="terra-sidebar-group-label px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
               >
                 {group.label}
               </h3>
@@ -145,15 +170,16 @@ function Sidebar({ groups, user, onLogout, onNavigate }) {
                       <NavLink
                         to={item.to}
                         end={item.end}
+                        title={item.label}
                         onClick={onNavigate}
                         className={({ isActive }) =>
-                          `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                          `terra-sidebar-link flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                             isActive ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                           }`
                         }
                       >
                         <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                        <span className="truncate">{item.label}</span>
+                        <span className="terra-sidebar-reveal truncate">{item.label}</span>
                       </NavLink>
                     </li>
                   )
@@ -164,20 +190,26 @@ function Sidebar({ groups, user, onLogout, onNavigate }) {
         })}
       </nav>
 
-      <div className="border-t border-slate-200 p-3">
-        <div className="rounded-xl bg-muted px-3 py-3">
-          <p className="truncate text-sm font-medium text-slate-800" title={user?.display_name || user?.email}>{user?.display_name || user?.email}</p>
-          <p className="truncate text-xs text-slate-500">{roleLabels[user?.roles?.[0]] || 'Usuario'}</p>
-          {user?.area_name ? <p className="mt-1 truncate text-xs text-slate-400" title={user.area_name}>{user.area_name}</p> : null}
+      <div data-testid={rail ? 'sidebar-footer' : undefined} className="border-t border-slate-200 p-3">
+        <div data-testid={rail ? 'sidebar-user' : undefined} className="terra-sidebar-user flex items-center gap-2 rounded-xl bg-muted px-3 py-3">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand-800" aria-hidden="true">
+            {initials}
+          </span>
+          <div className="terra-sidebar-reveal min-w-0">
+            <p className="truncate text-sm font-medium text-slate-800" title={displayName}>{displayName}</p>
+            <p className="truncate text-xs text-slate-500">{roleLabel}</p>
+            {user?.area_name ? <p className="mt-1 truncate text-xs text-slate-400" title={user.area_name}>{user.area_name}</p> : null}
+          </div>
         </div>
-        <div className="mt-2 flex items-stretch gap-2">
+        <div className="terra-sidebar-footer-actions mt-2 flex items-stretch gap-2">
           <button
             type="button"
             onClick={onLogout}
-            className="flex min-h-11 flex-1 items-center gap-2 rounded-xl px-2.5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            aria-label="Cerrar sesión"
+            className="terra-sidebar-logout flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-2.5 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
             <LogOut className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">Cerrar sesión</span>
+            <span className="terra-sidebar-reveal truncate">Cerrar sesión</span>
           </button>
           <ThemeToggle />
         </div>
@@ -191,11 +223,27 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [open, setOpen] = useState(false)
+  const mainRef = useRef(null)
+  const previousPath = useRef(location.pathname)
   const navGroups = filterNavGroups(isWorker ? workerNavGroups : adminNavGroups, can)
+
+  useEffect(() => {
+    if (previousPath.current === location.pathname) return
+    previousPath.current = location.pathname
+    mainRef.current?.focus({ preventScroll: true })
+  }, [location.pathname])
 
   const handleLogout = async () => {
     await logout()
     navigate('/', { replace: true })
+  }
+
+  const handleNavigate = (event) => {
+    setOpen(false)
+    if (event && (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)) return
+    window.requestAnimationFrame(() => {
+      mainRef.current?.focus({ preventScroll: true })
+    })
   }
 
   const headerLabel = isAdministrative ? 'Panel administrativo' : isWorker ? 'Panel del trabajador' : 'Panel restringido'
@@ -203,8 +251,11 @@ export default function AppLayout() {
   const testIds = isWorker
     ? { sidebar: 'worker-sidebar', workspace: 'worker-workspace', scroll: 'worker-scroll', drawer: 'worker-drawer' }
     : { sidebar: 'admin-sidebar', workspace: 'admin-workspace', scroll: 'admin-scroll', drawer: 'admin-drawer' }
-  const sidebar = (
-    <Sidebar groups={navGroups} user={user} onLogout={handleLogout} onNavigate={() => setOpen(false)} />
+  const railSidebar = (
+    <Sidebar variant="rail" groups={navGroups} user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
+  )
+  const drawerSidebar = (
+    <Sidebar variant="drawer" groups={navGroups} user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
   )
 
   return (
@@ -212,9 +263,9 @@ export default function AppLayout() {
       <div className="mx-auto flex h-full w-full max-w-[1920px] gap-3 sm:gap-4">
         <aside
           data-testid={testIds.sidebar}
-          className="hidden shrink-0 overflow-hidden rounded-[22px] border border-slate-200 bg-sidebar-background shadow-sm md:flex md:h-full md:w-[clamp(210px,17vw,232px)]"
+          className="terra-sidebar-rail relative hidden h-full shrink-0 rounded-[22px] bg-sidebar-background shadow-sm md:flex"
         >
-          {sidebar}
+          {railSidebar}
         </aside>
 
         <div
@@ -251,6 +302,7 @@ export default function AppLayout() {
           </header>
 
           <div
+            ref={mainRef}
             data-testid={testIds.scroll}
             tabIndex={0}
             aria-label={`Contenido del ${headerLabel.toLowerCase()}`}
@@ -283,7 +335,7 @@ export default function AppLayout() {
             >
               <X className="h-5 w-5" />
             </button>
-            {sidebar}
+            {drawerSidebar}
           </aside>
         </div>
       ) : null}

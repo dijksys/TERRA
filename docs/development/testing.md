@@ -176,6 +176,7 @@ Siteverify real exige un token de Cloudflare.
 | Auditoría | audit | DB | — | registro/listado | Cubierto |
 | Cliente de Vite / montaje de React / HMR | frontend | HTTP + navegador | cliente HTTP | Playwright (47 E2E) | Cubierto |
 | Layout de admin / responsive | frontend | Navegador | — | Playwright (320–2560 px, altura 500–1080 px, zoom 200 %, container queries) | Cubierto |
+| Sidebar rail hover-expandible / foco / táctil | frontend | Navegador | — | Playwright (76→248 px, hover, foco visible, táctil, workspace estable) | Cubierto |
 | Shell de worker / scroll / drawer | frontend | Navegador | — | Playwright (320–1920 px, dos superficies, scroll independiente) | Cubierto |
 | Tablas, formularios, modales, texto largo | frontend | Navegador | — | Playwright | Cubierto |
 | Tema True Black / claro, superficies, dropdowns, persistencia | frontend | Navegador + localStorage | — | Playwright | Cubierto |

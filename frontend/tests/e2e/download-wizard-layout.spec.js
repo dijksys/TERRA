@@ -222,18 +222,18 @@ test.describe('Descargas aprovecha el ancho del workspace', () => {
     await page.locator('table').evaluate((table) => table.closest('.card').setAttribute('data-shot', 'explorer'))
     await page.locator('[data-shot="explorer"]').screenshot({ path: '/tmp/terra-downloads-explorer-1440.png' })
 
-    // 1024: se muestra Tipo y las fechas se reorganizan bajo el nombre.
-    await scrollTop(1024, 900)
+    // 850: se muestra Tipo y las fechas se reorganizan bajo el nombre.
+    await scrollTop(850, 900)
     await expect(page.getByRole('columnheader', { name: 'Tipo' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Fechas' })).toBeHidden()
 
     // En un contenedor estrecho las columnas secundarias se reorganizan bajo el nombre.
-    await page.setViewportSize({ width: 900, height: 800 })
+    await page.setViewportSize({ width: 600, height: 800 })
     await page.waitForTimeout(120)
     await expect(page.getByRole('columnheader', { name: 'Tipo' })).toBeHidden()
     await expect(page.getByRole('columnheader', { name: 'Fechas' })).toBeHidden()
     await expect(page.getByText('application/pdf').first()).toBeVisible()
-    await page.screenshot({ path: '/tmp/terra-downloads-900.png', fullPage: true })
+    await page.screenshot({ path: '/tmp/terra-downloads-600.png', fullPage: true })
 
     await scrollTop(390, 1400)
     await page.screenshot({ path: '/tmp/terra-downloads-390.png' })

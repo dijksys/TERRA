@@ -73,10 +73,14 @@ test('Política institucional distribuye versión vigente y publicación en dos 
     await expect(page.getByRole('heading', { name: 'Política institucional', level: 1 })).toBeVisible()
     await assertNoDocumentOverflow(page, `política a ${width}px`)
 
+    const containerWidth = await page.locator('main').evaluate((element) => {
+      const style = getComputedStyle(element)
+      return element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    })
     const cards = page.locator('main .card')
     await expect(cards).toHaveCount(2)
     const [first, second] = await Promise.all([cards.nth(0).boundingBox(), cards.nth(1).boundingBox()])
-    if (width >= 1280) {
+    if (containerWidth >= 896) {
       expect(Math.abs(first.y - second.y), `tarjetas apiladas a ${width}px`).toBeLessThanOrEqual(1)
       expect(second.x).toBeGreaterThan(first.x + first.width - 1)
     } else {
@@ -118,10 +122,14 @@ test('Seguridad presenta cuenta y cambio de contraseña en 40/60', async ({ page
     await expect(page.getByLabel('Contraseña actual')).toBeVisible()
     await assertNoDocumentOverflow(page, `seguridad a ${width}px`)
 
+    const containerWidth = await page.locator('main').evaluate((element) => {
+      const style = getComputedStyle(element)
+      return element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    })
     const cards = page.locator('main .card')
     await expect(cards).toHaveCount(2)
     const [account, password] = await Promise.all([cards.nth(0).boundingBox(), cards.nth(1).boundingBox()])
-    if (width >= 1280) {
+    if (containerWidth >= 896) {
       expect(Math.abs(account.y - password.y), `tarjetas apiladas a ${width}px`).toBeLessThanOrEqual(1)
       expect(password.x).toBeGreaterThan(account.x + account.width - 1)
       expect(password.width).toBeGreaterThan(account.width)
