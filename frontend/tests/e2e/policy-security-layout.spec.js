@@ -54,7 +54,7 @@ async function mockSession(page, { mustRotate = false } = {}) {
   })
 }
 
-const widths = [1920, 1440, 1366, 1280, 1152, 1024, 960, 768, 390, 360]
+const widths = [1920, 1440, 1366, 1280, 1152, 1024, 960, 900, 861, 860, 768, 390, 360]
 
 async function assertNoDocumentOverflow(page, label) {
   const { client, scroll } = await page.evaluate(() => ({

@@ -132,9 +132,9 @@ test('Trabajadores excluye al administrador y permite actualizar solo a un traba
   await page.getByRole('link', { name: 'Tra Bajador' }).click()
   await expect(page.getByRole('heading', { name: 'Tra Bajador', level: 1 })).toBeVisible()
   await expect(page.getByText('Modificar asignación')).toBeVisible()
-  await expect(page.getByLabel('Área')).toBeVisible()
-  await expect(page.getByLabel('Cargo')).toBeVisible()
-  await expect(page.getByLabel('Estado de la cuenta')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Área' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Cargo' })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Estado de la cuenta' })).toBeVisible()
 
   await selectOption(page, 'Área', 'Área Dos')
   await selectOption(page, 'Cargo', 'Cargo Dos')

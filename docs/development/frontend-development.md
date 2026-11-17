@@ -21,6 +21,25 @@ del host con `WEB_PORT` en `.env`.
 - Vitest + React Testing Library
 - Playwright + Chromium dentro del contenedor
 
+## Navegación lateral
+
+`frontend/src/components/navigation/AppSidebar.jsx` concentra la presentación común de
+la navegación: marca, grupos, enlaces, iconos, estado activo, identidad del usuario, rol,
+área, logout y `ThemeToggle`. `AppLayout.jsx` conserva `useAuth`, los grupos, el filtrado
+por permisos, `currentSection`, el estado del drawer, el header y `Outlet`; el componente
+recibe únicamente los grupos ya autorizados.
+
+- `variant="desktop"` usa un rail flex de 72 px que se expande a 280 px por `:hover` en
+  punteros finos. La transición es de 180 ms y el workspace reduce su ancho disponible.
+- `variant="drawer"` se usa por debajo de 861 px y siempre muestra los textos.
+- No hay estado React de expansión, persistencia, `:focus-within` ni botón de fijación.
+- En dispositivos táctiles de escritorio la sidebar se mantiene expandida.
+- La navegación tiene scroll vertical independiente y no genera scroll horizontal.
+- Los enlaces conservan `aria-label`, `title`, `aria-current` y focus visible.
+
+Las pruebas de presentación viven en `frontend/tests/unit/app-sidebar.test.jsx`; las de
+geometría, hover, contracción, teclado, roles, tema y drawer están en Playwright.
+
 ## Edición en vivo
 
 Los archivos fuente bajo `src/`, `public/`, `tests/` y las configuraciones de desarrollo se montan mediante bind en `/app`. Los cambios en `src/` se reflejan a través del HMR de Vite.

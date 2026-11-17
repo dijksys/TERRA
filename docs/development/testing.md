@@ -174,9 +174,9 @@ Siteverify real exige un token de Cloudflare.
 | Integridad de organización | organization/users | DB | slug/normalización | FK compuesta | Cubierto |
 | Sesiones/CSRF | auth | DB + HTTP | helpers de token | httptest + DB | Cubierto |
 | Auditoría | audit | DB | — | registro/listado | Cubierto |
-| Cliente de Vite / montaje de React / HMR | frontend | HTTP + navegador | cliente HTTP | Playwright (47 E2E) | Cubierto |
+| Cliente de Vite / montaje de React / HMR | frontend | HTTP + navegador | cliente HTTP | Playwright (cliente Vite/React Refresh/HMR) | Cubierto |
 | Layout de admin / responsive | frontend | Navegador | — | Playwright (320–2560 px, altura 500–1080 px, zoom 200 %, container queries) | Cubierto |
-| Sidebar rail hover-expandible / foco / táctil | frontend | Navegador | — | Playwright (76→248 px, hover, foco visible, táctil, workspace estable) | Cubierto |
+| Sidebar hover-expandible / foco / táctil | frontend | Navegador | `app-sidebar.test.jsx` (presentación) | Playwright (72→280 px, hover, salida, táctil, workspace adaptativo, 861/860) | Cubierto |
 | Shell de worker / scroll / drawer | frontend | Navegador | — | Playwright (320–1920 px, dos superficies, scroll independiente) | Cubierto |
 | Tablas, formularios, modales, texto largo | frontend | Navegador | — | Playwright | Cubierto |
 | Tema True Black / claro, superficies, dropdowns, persistencia | frontend | Navegador + localStorage | — | Playwright | Cubierto |

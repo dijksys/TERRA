@@ -38,19 +38,24 @@ frontend/src/
 ## Layout administrativo y del trabajador
 
 El panel administrativo (`AppLayout` cuando el rol es `admin`) usa dos superficies
-sobre un fondo gris azulado: un rail lateral de 76 px y un workspace flexible. El rail
-reserva el ancho contraído y contiene un panel flotante de 76 px que se expande a
-248 px por `:hover` en punteros finos o por `:has(:focus-visible)` para teclado. La
-expansión se dibuja por encima del workspace, sin cambiar su ancho ni provocar reflow.
-En dispositivos táctiles de escritorio el panel se muestra expandido; en móvil se
-mantiene el drawer. Al navegar, el foco se traslada al contenedor de contenido para que
-la sidebar no quede fijada por un enlace enfocado. El shell mide `100dvh` y
+sobre un fondo gris azulado. `AppSidebar` es una columna flex de 72 px en estado mini y
+280 px expandida, con transición de 180 ms. La expansión se activa exclusivamente por
+`:hover` en punteros finos; no usa estado React, persistencia ni `:focus-within`. Al
+expandirse, la sidebar participa del flujo flex y el workspace reduce su ancho
+disponible; no hay superposición ni reflow artificial. En dispositivos táctiles de
+escritorio se mantiene expandida. El límite responsive es 861 px: desde 861 px se usa la
+sidebar desktop y por debajo el drawer móvil. El shell mide `100dvh` y
 `max-w-[1920px]`, con 16 px de margen exterior: ocupa todo el ancho en 1366–1920 px y
 se limita en monitores ultrapanorámicos para no estirar la interfaz sin control. El
 documento nunca scrollea; el único propietario del scroll vertical es `admin-scroll`
-(`overflow-y: auto`, sin barra visible vía `.admin-scroll-container`). El rail es un
-flex item fijo; el panel interno se posiciona de forma absoluta para no alterar el
-layout.
+(`overflow-y: auto`, sin barra visible vía `.admin-scroll-container`). La navegación
+interna de `AppSidebar` también tiene scroll vertical independiente y sin scroll
+horizontal.
+
+`AppSidebar` concentra la marca, grupos, enlaces, estado activo, identidad del usuario,
+rol, área, logout y `ThemeToggle`. `AppLayout` conserva `useAuth`, la definición y el
+filtrado de grupos, `roleLabels`, `currentSection`, el estado del drawer, el logout, el
+header y `Outlet`. El componente visual recibe únicamente grupos ya autorizados.
 
 La adaptación de contenido usa container queries sobre `main` (`@container`), no solo
 breakpoints de viewport: las cuadrículas del dashboard, de las páginas administrativas
@@ -68,9 +73,9 @@ el ancho de la tabla se propague al documento en Chromium. Formularios: `.input`
 `min-w-0` para que selects e inputs puedan encogerse dentro de flex/grid. Los modales
 son flex column con `max-h-[92dvh]`, cabecera y pie fijos y cuerpo desplazable.
 
-Validado en 320, 360, 375, 390, 430, 480, 640, 768, 820, 900, 960, 1024, 1097, 1180,
-1280, 1366, 1440, 1536, 1648, 1707, 1745 y 1920 px, con alturas de 500–1080 px, y a
-200 % de zoom (960×540).
+Validado en 320, 360, 375, 390, 430, 480, 640, 768, 820, 860, 861, 900, 960, 1024,
+1097, 1180, 1280, 1366, 1440, 1536, 1648, 1707, 1745 y 1920 px, con alturas de
+500–1080 px, y a 200 % de zoom (960×540).
 
 ## Tema claro y oscuro
 
@@ -225,7 +230,7 @@ el respaldo; WebSocket no es autoridad.
 - Tarjetas `rounded-2xl`, formularios consistentes, tablas con scroll horizontal.
 - Iconografía Lucide.
 - Estados de carga, vacío, error, parcial y completado.
-- Rail lateral colapsado con expansión flotante por hover o foco visible en escritorio, y drawer en móvil.
+- Sidebar flex de 72 px con expansión a 280 px por hover en escritorio, y drawer móvil por debajo de 861 px.
 - `:focus-visible` global y etiquetas accesibles.
 
 ## Servidor de desarrollo

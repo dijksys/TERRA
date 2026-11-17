@@ -56,6 +56,11 @@ async function mockSession(page, role) {
   })
 }
 
+async function expandSidebar(sidebar) {
+  await sidebar.hover()
+  await expect.poll(async () => (await sidebar.boundingBox()).width).toBeGreaterThan(200)
+}
+
 async function groupLinks(sidebar, label) {
   const heading = sidebar.getByRole('heading', { name: label })
   await expect(heading).toBeVisible()
@@ -66,6 +71,7 @@ test('el administrador ve las cinco categorías con sus módulos', async ({ page
   await mockSession(page, 'admin')
   await page.goto('/app/admin')
   const sidebar = page.getByTestId('admin-sidebar')
+  await expandSidebar(sidebar)
   expect(await sidebar.getByRole('heading').allTextContents()).toEqual([
     'GENERAL', 'ORGANIZACIÓN', 'GESTIÓN DOCUMENTAL', 'CONTROL INSTITUCIONAL', 'CUENTA Y SEGURIDAD',
   ])
@@ -85,6 +91,7 @@ test('moderador y solo lectura conservan solo sus grupos y módulos', async ({ p
   await mockSession(page, 'moderator')
   await page.goto('/app/admin')
   const moderator = page.getByTestId('admin-sidebar')
+  await expandSidebar(moderator)
   expect(await groupLinks(moderator, 'GESTIÓN DOCUMENTAL')).toEqual(['Conexiones Drive', 'Trabajos'])
   expect(await groupLinks(moderator, 'CONTROL INSTITUCIONAL')).toEqual(['Auditoría'])
   await expect(moderator.getByRole('link', { name: 'Descargas' })).toHaveCount(0)
@@ -97,6 +104,7 @@ test('moderador y solo lectura conservan solo sus grupos y módulos', async ({ p
   await mockSession(page, 'read_only')
   await page.reload()
   const readOnly = page.getByTestId('admin-sidebar')
+  await expandSidebar(readOnly)
   expect(await groupLinks(readOnly, 'GESTIÓN DOCUMENTAL')).toEqual(['Conexiones Drive', 'Trabajos'])
   expect(await groupLinks(readOnly, 'CONTROL INSTITUCIONAL')).toEqual(['Auditoría'])
   await expect(readOnly.getByRole('link', { name: 'Descargas' })).toHaveCount(0)
@@ -108,6 +116,7 @@ test('el trabajador ve solo sus tres categorías', async ({ page }) => {
   await mockSession(page, 'user')
   await page.goto('/app')
   const sidebar = page.getByTestId('worker-sidebar')
+  await expandSidebar(sidebar)
   expect(await sidebar.getByRole('heading').allTextContents()).toEqual([
     'GENERAL', 'GESTIÓN DOCUMENTAL', 'CUENTA Y SEGURIDAD',
   ])
@@ -135,12 +144,15 @@ test('el drawer móvil reutiliza los mismos grupos y cierra al navegar', async (
 test('las categorías conservan contraste en claro y True Black', async ({ page }) => {
   await mockSession(page, 'admin')
   await page.goto('/app/admin')
-  const heading = page.getByTestId('admin-sidebar').getByRole('heading', { name: 'GENERAL' })
+  const sidebar = page.getByTestId('admin-sidebar')
+  await expandSidebar(sidebar)
+  const heading = sidebar.getByRole('heading', { name: 'GENERAL' })
   const light = await heading.evaluate((element) => getComputedStyle(element).color)
 
   await page.evaluate(() => localStorage.setItem('terra-theme', 'dark'))
   await page.reload()
-  const darkHeading = page.getByTestId('admin-sidebar').getByRole('heading', { name: 'GENERAL' })
+  await expandSidebar(sidebar)
+  const darkHeading = sidebar.getByRole('heading', { name: 'GENERAL' })
   await expect(darkHeading).toBeVisible()
   const dark = await darkHeading.evaluate((element) => getComputedStyle(element).color)
   expect(dark).not.toBe(light)

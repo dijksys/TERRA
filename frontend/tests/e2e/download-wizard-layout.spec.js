@@ -222,8 +222,8 @@ test.describe('Descargas aprovecha el ancho del workspace', () => {
     await page.locator('table').evaluate((table) => table.closest('.card').setAttribute('data-shot', 'explorer'))
     await page.locator('[data-shot="explorer"]').screenshot({ path: '/tmp/terra-downloads-explorer-1440.png' })
 
-    // 850: se muestra Tipo y las fechas se reorganizan bajo el nombre.
-    await scrollTop(850, 900)
+    // 800: se muestra Tipo y las fechas se reorganizan bajo el nombre.
+    await scrollTop(800, 900)
     await expect(page.getByRole('columnheader', { name: 'Tipo' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Fechas' })).toBeHidden()
 

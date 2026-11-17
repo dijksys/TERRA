@@ -296,6 +296,8 @@ test('el layout del trabajador se adapta sin desbordamientos', async ({ page }) 
     [1280, 800],
     [1024, 768],
     [900, 800],
+    [861, 768],
+    [860, 768],
     [768, 800],
     [390, 844],
     [360, 800],
@@ -332,7 +334,7 @@ test('el layout del trabajador se adapta sin desbordamientos', async ({ page }) 
     expect(layout.workspaceBottom, `workspace fuera del viewport en ${label}`).toBeLessThanOrEqual(height)
     expect(layout.workspaceWidth, `workspace sin ancho en ${label}`).toBeGreaterThan(0)
     expect(layout.scrollOverflow).toBe('auto')
-    if (width >= 768) {
+    if (width >= 861) {
       expect(layout.sidebarDisplay).not.toBe('none')
       await expect(page.getByTestId('worker-sidebar')).toBeVisible()
     } else {
