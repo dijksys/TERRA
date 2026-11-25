@@ -194,11 +194,6 @@ export default function OrganizationPage() {
       <PageHeader
         title="Áreas y cargos"
         description="Catálogo organizativo institucional. Áreas y cargos tienen nombres únicos y responsabilidades descriptivas; estas nunca otorgan permisos de sistema."
-        actions={canWrite ? (
-          <Button onClick={() => { setAreaFieldErrors({}); setAreaModal({ name: '', status: 'active', responsibilities: [] }) }}>
-            <Plus className="h-4 w-4" /> Nueva área
-          </Button>
-        ) : null}
       />
 
       {error ? <Alert tone="error" onClose={() => setError('')}>{error}</Alert> : null}
@@ -207,7 +202,17 @@ export default function OrganizationPage() {
       <div className="grid gap-6 @2xl:grid-cols-2">
         <Card>
           <CardBody>
-            <h2 className="mb-3 font-semibold text-slate-900">Áreas</h2>
+            <div data-testid="organization-areas-panel" className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-semibold text-slate-900">Áreas</h2>
+              {canWrite ? (
+                <Button
+                  className="shrink-0"
+                  onClick={() => { setAreaFieldErrors({}); setAreaModal({ name: '', status: 'active', responsibilities: [] }) }}
+                >
+                  <Plus className="h-4 w-4" /> Nueva área
+                </Button>
+              ) : null}
+            </div>
             {!areas ? (
               <LoadingBlock />
             ) : areas.length === 0 ? (

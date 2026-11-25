@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { selectOption } from './helpers/select'
-import { ADMIN_PERMISSIONS } from '../fixtures/permissions'
+import { ADMIN_PERMISSIONS, READ_ONLY_PERMISSIONS } from '../fixtures/permissions'
 
 const admin = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -20,8 +20,8 @@ function position(id, areaId, name, status = 'active', responsibilities = []) {
   return { id, area_id: areaId, name, slug: id, status, responsibilities }
 }
 
-async function mockOrganization(page) {
-  let areas = [
+async function mockOrganization(page, { permissions = ADMIN_PERMISSIONS, initialAreas } = {}) {
+  let areas = initialAreas ?? [
     area('area-a', 'Recursos Humanos', 'active', ['Administración de personal']),
     area('area-b', 'Mesa de partes'),
   ]
@@ -40,7 +40,7 @@ async function mockOrganization(page) {
         contentType: 'application/json',
         body: JSON.stringify({
           user: admin,
-          permissions: ADMIN_PERMISSIONS,
+          permissions,
           has_local_credentials: true,
           must_rotate_password: false,
           pending_profile: false,
@@ -209,4 +209,82 @@ test('edita responsabilidades y estado de áreas y cargos', async ({ page }) => 
     responsibilities: ['Recepción de documentos', 'Agenda institucional'],
   })
   await expect(page.getByText('Secretaria Ejecutiva')).toBeVisible()
+})
+
+test('ubica Nueva área dentro del encabezado de la tarjeta Áreas', async ({ page }) => {
+  await mockOrganization(page)
+  await openPage(page)
+
+  const panel = page.getByTestId('organization-areas-panel')
+  await expect(panel.getByRole('heading', { name: 'Áreas', exact: true })).toBeVisible()
+
+  const createArea = panel.getByRole('button', { name: 'Nueva área' })
+  await expect(createArea).toBeVisible()
+  await expect(createArea).toHaveClass(/btn-primary/)
+
+  const placement = await createArea.evaluate((button) => {
+    const panelBox = document.querySelector('[data-testid="organization-areas-panel"]').closest('.card')
+    const pageHeader = document.querySelector('h1').parentElement.parentElement
+    return {
+      sameCardAsList: button.closest('.card') === panelBox,
+      pageHeaderButtons: pageHeader.querySelectorAll('button').length,
+    }
+  })
+  expect(placement.sameCardAsList).toBeTruthy()
+  expect(placement.pageHeaderButtons).toBe(0)
+
+  await createArea.click()
+  await expect(page.getByRole('heading', { name: 'Nueva área' })).toBeVisible()
+})
+
+test('permite crear la primera área desde el estado vacío', async ({ page }) => {
+  const state = await mockOrganization(page, { initialAreas: [] })
+  await openPage(page)
+
+  await expect(page.getByText('Sin áreas')).toBeVisible()
+  const panel = page.getByTestId('organization-areas-panel')
+  await panel.getByRole('button', { name: 'Nueva área' }).click()
+  await page.getByLabel('Nombre del área').fill('Primera área')
+  await page.getByRole('button', { name: 'Añadir responsabilidad' }).click()
+  await page.getByRole('textbox', { name: 'Responsabilidad 1', exact: true }).fill('Atención ciudadana')
+  await page.getByRole('button', { name: 'Guardar' }).click()
+
+  await expect(page.getByText('Área creada.')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Primera área Activa/ })).toBeVisible()
+  expect(state.requests.areaCreate).toEqual({
+    name: 'Primera área',
+    responsibilities: ['Atención ciudadana'],
+  })
+})
+
+test('oculta las acciones de escritura sin ORGANIZATION_WRITE', async ({ page }) => {
+  await mockOrganization(page, { permissions: READ_ONLY_PERMISSIONS })
+  await openPage(page)
+
+  await expect(page.getByTestId('organization-areas-panel').getByRole('heading', { name: 'Áreas', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Nueva área' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Nuevo cargo' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Editar/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Recursos Humanos Activa/ })).toBeVisible()
+})
+
+test('la acción permanece dentro de la tarjeta sin desbordar en todo el rango de anchos', async ({ page }) => {
+  await mockOrganization(page)
+
+  for (const [width, height] of [[1920, 1080], [1440, 900], [1024, 768], [768, 900], [390, 844], [320, 700]]) {
+    await page.setViewportSize({ width, height })
+    await page.goto('/app/admin/organization')
+    await expect(page.getByRole('heading', { name: 'Áreas y cargos', level: 1 })).toBeVisible()
+
+    const panel = page.getByTestId('organization-areas-panel')
+    const createArea = panel.getByRole('button', { name: 'Nueva área' })
+    await expect(createArea).toBeVisible()
+
+    const panelBox = await panel.boundingBox()
+    const buttonBox = await createArea.boundingBox()
+    expect(buttonBox.x, `borde izquierdo a ${width}px`).toBeGreaterThanOrEqual(panelBox.x - 1)
+    expect(buttonBox.x + buttonBox.width, `borde derecho a ${width}px`).toBeLessThanOrEqual(panelBox.x + panelBox.width + 1)
+    expect(buttonBox.y + buttonBox.height, `borde inferior a ${width}px`).toBeLessThanOrEqual(panelBox.y + panelBox.height + 1)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), `overflow a ${width}px`).toBeFalsy()
+  }
 })
