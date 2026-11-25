@@ -24,22 +24,25 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-slate-200 bg-card">
-        <div className="mx-auto flex h-16 max-w-4xl items-center gap-3 px-4 sm:px-6">
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
-          <div>
-            <p className="text-sm font-semibold text-slate-900">TERRA</p>
-            <p className="text-xs text-slate-500">Configuración inicial</p>
+      <div className="mx-auto w-full max-w-3xl px-4 pt-4 sm:px-6 sm:pt-6">
+        <header
+          data-testid="onboarding-navbar"
+          className="flex min-h-16 w-full items-center gap-3 rounded-full border border-border bg-card px-4 shadow-sm sm:px-6"
+        >
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-700 font-bold text-white">T</span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-900">TERRA</p>
+            <p className="truncate text-xs text-slate-500">Configuración inicial</p>
           </div>
-        </div>
-      </header>
-      <main className="@container mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        </header>
+      </div>
+      <main className="@container mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
         <PageHeader
           title="Complete su perfil"
           description="Necesitamos sus datos y su asignación organizativa para activar su cuenta institucional."
         />
 
-        <div className="mb-5 grid gap-3 @lg:grid-cols-3">
+        <div data-testid="onboarding-steps" className="mb-5 grid gap-3 @lg:grid-cols-3">
           <div className="card flex items-center gap-3 p-4">
             <UserRound className="h-5 w-5 text-brand-700" />
             <span className="text-sm text-slate-600">Datos personales</span>
