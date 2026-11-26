@@ -16,12 +16,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"terra/internal/admin"
 	"terra/internal/audit"
 	"terra/internal/auth"
 	"terra/internal/downloads"
+	"terra/internal/drive"
+	"terra/internal/organization"
 	"terra/internal/platform/config"
 	"terra/internal/platform/crypto"
 	"terra/internal/realtime"
+	"terra/internal/server"
 	"terra/internal/storage"
 	"terra/internal/users"
 	"terra/tests/helpers"
@@ -402,4 +406,102 @@ func readRealtimeTimeout(t *testing.T, conn *websocket.Conn) (realtime.Message, 
 		t.Fatal(err)
 	}
 	return message, nil
+}
+
+// newRealtimeRouter construye el handler real de server.New para que la prueba
+// atraviese RequestID, Logger, Recoverer y SecurityHeaders. El resto de handlers
+// no se invoca porque el caso solo consume la ruta /api/v1/realtime.
+func newRealtimeRouter(cfg config.Config, log *slog.Logger, pool *pgxpool.Pool, svc *realtime.Service) http.Handler {
+	return server.New(cfg, log, pool, server.Handlers{
+		Auth:     auth.NewHandler(nil, cfg.SessionSecret),
+		Users:    users.NewHandler(nil, cfg.SessionSecret),
+		Org:      organization.NewHandler(nil, cfg.SessionSecret),
+		Drive:    drive.NewHandler(nil, cfg.SessionSecret),
+		Download: downloads.NewHandler(nil, nil, cfg, cfg.SessionSecret),
+		Admin:    admin.NewHandler(nil, cfg.SessionSecret),
+		Realtime: svc,
+	})
+}
+
+func TestRealtimeHandshakeThroughHTTPMiddlewareChain(t *testing.T) {
+	pool := helpers.Pool(t)
+	areaID, positionID := helpers.SeedOrganization(t, pool, "Área Middleware WS", "Cargo Middleware WS")
+	workerID := helpers.SeedUser(t, pool, areaID, positionID, "active")
+	helpers.SeedPolicy(t, pool, "2026-11")
+	connID := helpers.SeedConnection(t, pool, workerID, "2026-11")
+
+	ctx := context.Background()
+	usersRepo := users.NewRepository(pool)
+	authRepo := auth.NewRepository(pool)
+	downloadRepo := downloads.NewRepository(pool)
+	downloadSvc := downloads.NewService(config.Config{}, downloadRepo, nil, usersRepo, nil, audit.NewRepository(pool))
+	cfg := config.Config{
+		PublicURL: "http://localhost:8080", SessionCookie: "terra_session",
+		SessionTTL: time.Hour, SessionSecret: "realtime-middleware-secret",
+	}
+	svc := realtime.NewService(cfg, slog.Default(), pool, downloadSvc, downloadRepo, authRepo, usersRepo, nil)
+	defer svc.Close()
+
+	listenerCtx, stopListener := context.WithCancel(context.Background())
+	defer stopListener()
+	go svc.RunListener(listenerCtx, helpers.DatabaseURL())
+	waitForListener(t, pool)
+
+	httpServer := httptest.NewServer(newRealtimeRouter(cfg, slog.Default(), pool, svc))
+	defer httpServer.Close()
+	wsURL := "ws" + strings.TrimPrefix(httpServer.URL, "http") + "/api/v1/realtime"
+
+	session := createRealtimeSession(t, authRepo, workerID, "middleware-token")
+	dialCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, response, err := websocket.Dial(dialCtx, wsURL, &websocket.DialOptions{HTTPHeader: http.Header{
+		"Cookie": {"terra_session=" + session},
+		"Origin": {"http://localhost:8080"},
+	}})
+	if err != nil {
+		t.Fatalf("handshake a través de middleware: %v", err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "test")
+	if response.StatusCode != http.StatusSwitchingProtocols {
+		t.Fatalf("estado del handshake=%d, se esperaba %d", response.StatusCode, http.StatusSwitchingProtocols)
+	}
+	readRealtimeType(t, conn, "connection.ready")
+
+	job, _, err := downloadRepo.Create(ctx, &downloads.Job{
+		ID: uuid.New(), RequestedByUserID: workerID, DriveOwnerUserID: workerID,
+		DriveConnectionID: connID, AreaID: areaID, PositionID: positionID,
+		AreaName: "Área Middleware WS", PositionName: "Cargo Middleware WS",
+		AreaSlug: "area-middleware-ws", PositionSlug: "cargo-middleware-ws",
+		ScopeType: downloads.ScopeMyDriveFull, IdempotencyKey: "realtime-middleware",
+	}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writeRealtime(t, conn, map[string]any{"type": "subscribe", "channel": "job:" + job.ID.String()})
+	readRealtimeType(t, conn, "job.snapshot")
+
+	itemID := uuid.NewString()
+	downloadRepo.AddEvent(ctx, job.ID, "item.started", map[string]any{
+		"item_id": itemID, "name": "middleware.bin", "status": "downloading",
+	})
+	var eventID int64
+	if err := pool.QueryRow(ctx, `SELECT max(id) FROM job_events WHERE job_id=$1`, job.ID).Scan(&eventID); err != nil {
+		t.Fatal(err)
+	}
+	message := readRealtime(t, conn)
+	if message.Type != "job.item.started" {
+		t.Fatalf("evento=%s, se esperaba job.item.started", message.Type)
+	}
+	if message.EventID != eventID {
+		t.Fatalf("event_id=%d, esperado %d", message.EventID, eventID)
+	}
+	data, ok := message.Data.(map[string]any)
+	if !ok || data["event_id"] != float64(eventID) {
+		t.Fatalf("payload sin event_id: %+v", message.Data)
+	}
+	payload, ok := data["payload"].(map[string]any)
+	if !ok || payload["item_id"] != itemID {
+		t.Fatalf("payload sin item_id: %+v", data["payload"])
+	}
 }

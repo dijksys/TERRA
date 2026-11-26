@@ -117,4 +117,26 @@ describe('useJobEvents', () => {
     renderHook(() => useJobEvents('job-2'))
     expect(() => useRealtimeChannel.mock.calls.at(-1)[1]({ type: 'job.snapshot', revision: 1, data: {} })).not.toThrow()
   })
+
+  it('entrega job.stage al callback de elementos', () => {
+    const onSnapshot = vi.fn()
+    const onItemEvent = vi.fn()
+    renderHook(() => useJobEvents('job-1', onSnapshot, onItemEvent))
+    const handler = useRealtimeChannel.mock.calls.at(-1)[1]
+
+    handler({ type: 'job.stage', revision: 8, data: { job_id: 'job-1', payload: { stage: 'scanning' } } })
+
+    expect(onItemEvent).toHaveBeenCalledTimes(1)
+    expect(onSnapshot).not.toHaveBeenCalled()
+  })
+
+  it('solo informa conexión cuando el transporte está conectado', () => {
+    useRealtimeChannel.mockReturnValueOnce('connecting')
+    const { result } = renderHook(() => useJobEvents('job-1', vi.fn()))
+    expect(result.current).toBe(false)
+
+    useRealtimeChannel.mockReturnValueOnce('disconnected')
+    const disconnected = renderHook(() => useJobEvents('job-1', vi.fn()))
+    expect(disconnected.result.current).toBe(false)
+  })
 })

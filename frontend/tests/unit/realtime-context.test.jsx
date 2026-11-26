@@ -44,6 +44,7 @@ describe('RealtimeProvider', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     FakeWebSocket.instances = []
+    auth.user = { id: 'user-1' }
     globalThis.WebSocket = FakeWebSocket
   })
 
@@ -84,5 +85,47 @@ describe('RealtimeProvider', () => {
     const second = FakeWebSocket.instances[1]
     act(() => second.open())
     expect(second.sent).toContainEqual({ type: 'subscribe', channel: 'job:job-1', last_event_id: 12 })
+  })
+
+  it('no duplica la conexión al rerenderizar con la misma sesión', () => {
+    const onMessage = vi.fn()
+    const { rerender } = render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    act(() => FakeWebSocket.instances[0].open())
+
+    rerender(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+
+    expect(FakeWebSocket.instances).toHaveLength(1)
+    expect(screen.getByText('connected')).toBeInTheDocument()
+  })
+
+  it('refleja connecting y disconnected y limpia el temporizador al desmontar', () => {
+    const onMessage = vi.fn()
+    const { unmount } = render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    expect(screen.getByText('connecting')).toBeInTheDocument()
+
+    act(() => FakeWebSocket.instances[0].open())
+    expect(screen.getByText('connected')).toBeInTheDocument()
+
+    act(() => FakeWebSocket.instances[0].close())
+    expect(screen.getByText('disconnected')).toBeInTheDocument()
+
+    unmount()
+    act(() => vi.advanceTimersByTime(60000))
+    expect(FakeWebSocket.instances).toHaveLength(1)
+  })
+
+  it('cierra la conexión y no reconecta al cerrar sesión', () => {
+    const onMessage = vi.fn()
+    const { rerender } = render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    const socket = FakeWebSocket.instances[0]
+    act(() => socket.open())
+
+    auth.user = null
+    rerender(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+
+    expect(screen.getByText('idle')).toBeInTheDocument()
+    expect(socket.readyState).toBe(3)
+    act(() => vi.advanceTimersByTime(60000))
+    expect(FakeWebSocket.instances).toHaveLength(1)
   })
 })

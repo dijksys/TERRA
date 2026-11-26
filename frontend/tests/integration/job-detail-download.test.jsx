@@ -53,6 +53,28 @@ const item = (overrides = {}) => ({
   ...overrides,
 })
 
+const jobProgress = (percent) => ({
+  stage: 'downloading',
+  status: 'downloading',
+  completed_bytes: percent,
+  in_flight_bytes: 0,
+  transferred_bytes: percent,
+  known_total_bytes: 100,
+  unknown_size_items: 0,
+  byte_progress_percent: percent,
+  completed_items: 0,
+  skipped_items: 0,
+  failed_items: 0,
+  pending_items: 1,
+  retrying_items: 0,
+  downloading_items: 1,
+  download_speed_bytes_per_second: 0,
+  average_speed_bytes_per_second: 0,
+  eta_seconds: 0,
+  scan: { folders_discovered: 0, folders_scanned: 0, items_found: 0, downloadable_items: 0, skipped_items: 0 },
+  active_downloads: [],
+})
+
 function renderPage(basePath = '/app/jobs') {
   return render(
     <MemoryRouter initialEntries={[`${basePath}/job-1`]}>
@@ -75,6 +97,10 @@ function mockApi(items, jobOverride = job) {
 
 function itemsCalls() {
   return api.get.mock.calls.filter(([path]) => path.startsWith('/download-jobs/job-1/items'))
+}
+
+function jobCalls() {
+  return api.get.mock.calls.filter(([path]) => path === '/download-jobs/job-1')
 }
 
 async function emitItemEvent(type = 'job.item.started', payload = { item_id: 'item-1' }) {
@@ -334,4 +360,150 @@ describe('JobDetailPage y descarga de archivos almacenados', () => {
     expect(api.get.mock.calls.filter(([path]) => path === '/download-jobs/job-1').length).toBeGreaterThan(1)
     expect(itemsCalls().length).toBeGreaterThan(calls)
   }, 10000)
+
+  it('el fallback REST actualiza el progreso del trabajo y la tabla', async () => {
+    vi.useFakeTimers()
+    realtime.connected = false
+    let jobCall = 0
+    let itemsCall = 0
+    api.get.mockImplementation((path) => {
+      if (path === '/download-jobs/job-1') {
+        jobCall += 1
+        return Promise.resolve({ ...job, progress: jobProgress(jobCall === 1 ? 10 : 60) })
+      }
+      if (path.startsWith('/download-jobs/job-1/items')) {
+        itemsCall += 1
+        const status = itemsCall === 1 ? 'pending' : 'completed'
+        return Promise.resolve({
+          data: [item({ status, stored_file_id: status === 'completed' ? 'stored-file-1' : null })],
+          pagination: { page: 1, page_size: 25, total: 1 },
+        })
+      }
+      return Promise.reject(new Error(`ruta inesperada ${path}`))
+    })
+    renderPage()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '10')
+    expect(screen.getByText('Pendiente')).toBeInTheDocument()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5200)
+      await Promise.resolve()
+    })
+
+    expect(jobCalls().length).toBeGreaterThan(1)
+    expect(itemsCalls().length).toBeGreaterThan(1)
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '60')
+    expect(screen.getByText('Completado')).toBeInTheDocument()
+  }, 10000)
+
+  it('detiene el fallback REST cuando WebSocket vuelve a conectar', async () => {
+    vi.useFakeTimers()
+    realtime.connected = false
+    mockApi([item({ status: 'pending', stored_file_id: null })])
+    renderPage()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5200)
+      await Promise.resolve()
+    })
+    expect(jobCalls().length).toBeGreaterThan(1)
+
+    realtime.connected = true
+    await act(async () => {
+      realtime.refs.onSnapshot({ progress: jobProgress(20), progress_revision: 4 })
+    })
+    const jobCallsAfterReconnect = jobCalls().length
+    const itemsCallsAfterReconnect = itemsCalls().length
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12000)
+      await Promise.resolve()
+    })
+
+    expect(jobCalls()).toHaveLength(jobCallsAfterReconnect)
+    expect(itemsCalls()).toHaveLength(itemsCallsAfterReconnect)
+  }, 10000)
+
+  it('no consulta REST periódicamente mientras WebSocket está conectado', async () => {
+    vi.useFakeTimers()
+    realtime.connected = true
+    mockApi([item({ status: 'pending', stored_file_id: null })])
+    renderPage()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const jobCallsBefore = jobCalls().length
+    const itemsCallsBefore = itemsCalls().length
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12000)
+      await Promise.resolve()
+    })
+
+    expect(jobCalls()).toHaveLength(jobCallsBefore)
+    expect(itemsCalls()).toHaveLength(itemsCallsBefore)
+  }, 10000)
+
+  it('no mantiene polling en un trabajo terminal', async () => {
+    vi.useFakeTimers()
+    realtime.connected = false
+    mockApi([item({ status: 'completed' })], { ...job, status: 'completed' })
+    renderPage()
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    const jobCallsBefore = jobCalls().length
+    const itemsCallsBefore = itemsCalls().length
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12000)
+      await Promise.resolve()
+    })
+
+    expect(jobCalls()).toHaveLength(jobCallsBefore)
+    expect(itemsCalls()).toHaveLength(itemsCallsBefore)
+  }, 10000)
+
+  it('mantiene Acciones sin indicador de sincronización y conserva la cancelación', async () => {
+    realtime.connected = false
+    mockApi([item()])
+    api.post.mockResolvedValue({ ...job, status: 'cancel_requested' })
+    renderPage()
+    await screen.findByText('Reporte.pdf')
+
+    expect(screen.queryByText('Sincronización por REST')).not.toBeInTheDocument()
+    const trigger = screen.getByRole('button', { name: /Acciones/ })
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+    fireEvent.click(trigger)
+    await screen.findByRole('menu')
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Cancelar trabajo' }))
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/download-jobs/job-1/cancel'))
+  })
+
+  it('conserva Reintentar fallidos en la vista administrativa', async () => {
+    realtime.connected = true
+    mockApi([], { ...job, status: 'failed' })
+    api.post.mockResolvedValue({ ...job, status: 'queued' })
+    renderPage('/app/admin/jobs')
+    await screen.findByRole('heading', { name: 'Trabajo JOB-1' })
+
+    const trigger = screen.getByRole('button', { name: /Acciones/ })
+    fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false })
+    fireEvent.click(trigger)
+    await screen.findByRole('menu')
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Reintentar fallidos' }))
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/download-jobs/job-1/retry-failed'))
+  })
 })

@@ -174,4 +174,12 @@ test('el detalle reconcilia elementos por WebSocket y descarga de forma nativa',
   expect(download.suggestedFilename()).toBe('Reporte.pdf')
   expect(await page.evaluate(() => window.__objectURLs)).toBe(0)
   await expect(page).toHaveURL('/app/jobs/job-1')
+
+  await expect(page.getByText('Sincronización por REST')).toHaveCount(0)
+  await expect(page.locator('.lucide-wifi-off')).toHaveCount(0)
+  const actions = page.getByRole('button', { name: /Acciones/ })
+  await expect(actions).toBeVisible()
+  await actions.click()
+  await expect(page.getByRole('menuitem', { name: 'Actualizar' })).toBeVisible()
+  await page.keyboard.press('Escape')
 })
