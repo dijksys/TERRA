@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RealtimeProvider, useRealtimeChannel } from '../../src/features/realtime/RealtimeContext'
 
-const auth = vi.hoisted(() => ({ user: { id: 'user-1' } }))
+const auth = vi.hoisted(() => ({ user: { id: 'user-1' }, loading: false }))
 vi.mock('../../src/app/AuthContext', () => ({ useAuth: () => auth }))
 
 class FakeWebSocket {
@@ -21,8 +21,14 @@ class FakeWebSocket {
   }
 
   close() {
+    if (this.readyState === 3) return
     this.readyState = 3
+    this.closeCount = (this.closeCount || 0) + 1
     this.onclose?.()
+  }
+
+  error() {
+    this.onerror?.()
   }
 
   open() {
@@ -45,6 +51,7 @@ describe('RealtimeProvider', () => {
     vi.useFakeTimers()
     FakeWebSocket.instances = []
     auth.user = { id: 'user-1' }
+    auth.loading = false
     globalThis.WebSocket = FakeWebSocket
   })
 
@@ -127,5 +134,108 @@ describe('RealtimeProvider', () => {
     expect(socket.readyState).toBe(3)
     act(() => vi.advanceTimersByTime(60000))
     expect(FakeWebSocket.instances).toHaveLength(1)
+  })
+
+  it('espera la restauración de autenticación antes de abrir el WebSocket', () => {
+    auth.loading = true
+    const onMessage = vi.fn()
+    const { rerender } = render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+
+    expect(FakeWebSocket.instances).toHaveLength(0)
+    expect(screen.getByText('idle')).toBeInTheDocument()
+
+    auth.loading = false
+    rerender(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+
+    expect(FakeWebSocket.instances).toHaveLength(1)
+    expect(screen.getByText('connecting')).toBeInTheDocument()
+  })
+
+  it('no reinicia la conexión si el usuario cambia de referencia con el mismo id', () => {
+    const onMessage = vi.fn()
+    const { rerender } = render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    const socket = FakeWebSocket.instances[0]
+    act(() => socket.open())
+    const sentBefore = socket.sent.length
+
+    auth.user = { id: 'user-1', display_name: 'Mismo usuario' }
+    rerender(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+
+    expect(FakeWebSocket.instances).toHaveLength(1)
+    expect(socket.readyState).toBe(1)
+    expect(socket.sent).toHaveLength(sentBefore)
+    expect(screen.getByText('connected')).toBeInTheDocument()
+  })
+
+  it('cambia de conexión solo cuando cambia el id del usuario', () => {
+    const onMessage = vi.fn()
+    const { rerender } = render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    const first = FakeWebSocket.instances[0]
+    act(() => first.open())
+
+    auth.user = { id: 'user-2' }
+    rerender(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+
+    expect(FakeWebSocket.instances).toHaveLength(2)
+    expect(first.readyState).toBe(3)
+    expect(screen.getByText('connecting')).toBeInTheDocument()
+
+    const second = FakeWebSocket.instances[1]
+    act(() => second.open())
+    expect(screen.getByText('connected')).toBeInTheDocument()
+  })
+
+  it('ignora onopen, onmessage y onclose de sockets obsoletos', () => {
+    const onMessage = vi.fn()
+    const { rerender } = render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    const first = FakeWebSocket.instances[0]
+    act(() => first.open())
+
+    auth.user = { id: 'user-2' }
+    rerender(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    const second = FakeWebSocket.instances[1]
+
+    act(() => {
+      first.onopen?.()
+      first.onmessage?.({ data: JSON.stringify({ type: 'job.progress', revision: 99, data: { job_id: 'job-1' } }) })
+      first.onclose?.()
+    })
+
+    expect(onMessage).not.toHaveBeenCalled()
+    expect(screen.getByText('connecting')).toBeInTheDocument()
+    expect(FakeWebSocket.instances).toHaveLength(2)
+
+    act(() => vi.advanceTimersByTime(12000))
+    expect(FakeWebSocket.instances).toHaveLength(2)
+
+    act(() => second.open())
+    expect(screen.getByText('connected')).toBeInTheDocument()
+  })
+
+  it('centraliza el error vigente en un único cierre y una única reconexión', () => {
+    const onMessage = vi.fn()
+    render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    const first = FakeWebSocket.instances[0]
+    act(() => first.open())
+
+    act(() => first.error())
+
+    expect(first.closeCount).toBe(1)
+    expect(screen.getByText('disconnected')).toBeInTheDocument()
+
+    act(() => vi.advanceTimersByTime(5000))
+    expect(FakeWebSocket.instances).toHaveLength(2)
+  })
+
+  it('envía unsubscribe al desmontar el último manejador del canal', () => {
+    const onMessage = vi.fn()
+    const { rerender } = render(<RealtimeProvider><Probe onMessage={onMessage} /></RealtimeProvider>)
+    const socket = FakeWebSocket.instances[0]
+    act(() => socket.open())
+    expect(socket.sent).toContainEqual({ type: 'subscribe', channel: 'job:job-1', last_event_id: 0 })
+
+    rerender(<RealtimeProvider><Probe channel={null} onMessage={onMessage} /></RealtimeProvider>)
+
+    expect(socket.sent.at(-1)).toEqual({ type: 'unsubscribe', channel: 'job:job-1' })
   })
 })

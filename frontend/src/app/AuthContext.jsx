@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../services/api'
 import { isAdministrativeAccount, isWorkerAccount } from '../features/auth/roles'
 
@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
   const [pendingProfile, setPendingProfile] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const refreshPromiseRef = useRef(null)
 
   const clear = useCallback(() => {
     setUser(null)
@@ -30,21 +31,27 @@ export function AuthProvider({ children }) {
   }, [])
 
   const refresh = useCallback(async () => {
-    try {
-      const data = await api.get('/auth/me')
-      apply(data)
-      setError(null)
-      return data
-    } catch (err) {
-      if (err.status === 401 || err.status === 403) {
-        clear()
-      } else {
-        setError(err)
+    if (refreshPromiseRef.current) return refreshPromiseRef.current
+    const request = (async () => {
+      try {
+        const data = await api.get('/auth/me')
+        apply(data)
+        setError(null)
+        return data
+      } catch (err) {
+        if (err.status === 401 || err.status === 403) {
+          clear()
+        } else {
+          setError(err)
+        }
+        return null
+      } finally {
+        setLoading(false)
+        refreshPromiseRef.current = null
       }
-      return null
-    } finally {
-      setLoading(false)
-    }
+    })()
+    refreshPromiseRef.current = request
+    return request
   }, [apply, clear])
 
   useEffect(() => {

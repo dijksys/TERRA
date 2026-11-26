@@ -11,7 +11,8 @@ function sameChannelForMessage(message) {
 }
 
 export function RealtimeProvider({ children }) {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  const userId = user?.id ?? null
   const [status, setStatus] = useState('idle')
   const socketRef = useRef(null)
   const subscriptionsRef = useRef(new Map())
@@ -20,6 +21,8 @@ export function RealtimeProvider({ children }) {
   const reconnectRef = useRef(null)
   const attemptRef = useRef(0)
   const manualCloseRef = useRef(false)
+  const userIdRef = useRef(userId)
+  userIdRef.current = userId
 
   const send = useCallback((message) => {
     const socket = socketRef.current
@@ -27,7 +30,11 @@ export function RealtimeProvider({ children }) {
   }, [])
 
   const connect = useCallback(() => {
-    if (!user || socketRef.current) return
+    if (loading || !userId || socketRef.current) return
+    if (reconnectRef.current) {
+      window.clearTimeout(reconnectRef.current)
+      reconnectRef.current = null
+    }
     manualCloseRef.current = false
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const socket = new WebSocket(`${protocol}://${window.location.host}/api/v1/realtime`)
@@ -35,6 +42,7 @@ export function RealtimeProvider({ children }) {
     setStatus('connecting')
 
     socket.onopen = () => {
+      if (socketRef.current !== socket) return
       attemptRef.current = 0
       setStatus('connected')
       for (const [channel] of subscriptionsRef.current) {
@@ -42,6 +50,7 @@ export function RealtimeProvider({ children }) {
       }
     }
     socket.onmessage = (event) => {
+      if (socketRef.current !== socket) return
       let message
       try {
         message = JSON.parse(event.data)
@@ -61,34 +70,52 @@ export function RealtimeProvider({ children }) {
       for (const handler of handlers) handler(message)
     }
     socket.onclose = () => {
-      if (socketRef.current === socket) socketRef.current = null
+      if (socketRef.current !== socket) return
+      socketRef.current = null
       setStatus('disconnected')
-      if (manualCloseRef.current || !user) return
+      if (manualCloseRef.current || !userIdRef.current) return
+      if (reconnectRef.current) window.clearTimeout(reconnectRef.current)
       attemptRef.current += 1
       const backoff = Math.min(30000, 1000 * 2 ** Math.min(attemptRef.current, 5))
       const jitter = Math.floor(Math.random() * 500)
-      reconnectRef.current = window.setTimeout(connect, backoff + jitter)
+      reconnectRef.current = window.setTimeout(() => {
+        reconnectRef.current = null
+        if (userIdRef.current === userId) connect()
+      }, backoff + jitter)
     }
-    socket.onerror = () => socket.close()
-  }, [send, user])
+    socket.onerror = () => {
+      if (socketRef.current !== socket) return
+      socket.close()
+    }
+  }, [loading, send, userId])
 
   useEffect(() => {
-    if (!user) {
+    if (loading) return undefined
+    if (!userId) {
       manualCloseRef.current = true
-      if (reconnectRef.current) window.clearTimeout(reconnectRef.current)
-      socketRef.current?.close()
+      if (reconnectRef.current) {
+        window.clearTimeout(reconnectRef.current)
+        reconnectRef.current = null
+      }
+      const socket = socketRef.current
       socketRef.current = null
+      socket?.close()
       setStatus('idle')
       return undefined
     }
+    manualCloseRef.current = false
     connect()
     return () => {
       manualCloseRef.current = true
-      if (reconnectRef.current) window.clearTimeout(reconnectRef.current)
-      socketRef.current?.close()
+      if (reconnectRef.current) {
+        window.clearTimeout(reconnectRef.current)
+        reconnectRef.current = null
+      }
+      const socket = socketRef.current
       socketRef.current = null
+      socket?.close()
     }
-  }, [user, connect])
+  }, [loading, userId, connect])
 
   const subscribe = useCallback((channel, handler) => {
     let handlers = subscriptionsRef.current.get(channel)
