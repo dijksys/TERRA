@@ -58,6 +58,7 @@ export default function AdminDashboard() {
   const queuedAge = data.oldest_queued_age_seconds ?? data.oldest_queue_age_seconds ?? 0
   const queueWarning = data.queued_jobs > 0 && queuedAge >= threshold
   const jobsLink = canReadJobs ? '/app/admin/jobs' : undefined
+  const hasQuickLinks = canReadUsers || canReadDrive || canReadJobs || can(PERMISSIONS.POLICY_WRITE)
 
   return (
     <div>
@@ -220,33 +221,35 @@ export default function AdminDashboard() {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardBody>
-            <h2 className="font-semibold text-slate-900">Accesos rápidos</h2>
-            <div className="mt-3 space-y-2">
-              {canReadUsers ? (
-                <Link to="/app/admin/workers" className="btn-secondary w-full justify-start">
-                  <Users className="h-4 w-4" /> Trabajadores
-                </Link>
-              ) : null}
-              {canReadDrive ? (
-                <Link to="/app/admin/connections" className="btn-secondary w-full justify-start">
-                  <Database className="h-4 w-4" /> Conexiones de Drive
-                </Link>
-              ) : null}
-              {canReadJobs ? (
-                <Link to="/app/admin/jobs" className="btn-secondary w-full justify-start">
-                  <FileClock className="h-4 w-4" /> Historial de trabajos
-                </Link>
-              ) : null}
-              {can(PERMISSIONS.POLICY_WRITE) ? (
-                <Link to="/app/admin/policy" className="btn-secondary w-full justify-start">
-                  <ShieldAlert className="h-4 w-4" /> Política institucional
-                </Link>
-              ) : null}
-            </div>
-          </CardBody>
-        </Card>
+        {hasQuickLinks ? (
+          <Card className="h-fit self-start">
+            <CardBody>
+              <h2 className="font-semibold text-slate-900">Accesos rápidos</h2>
+              <div className="mt-3 space-y-2">
+                {canReadUsers ? (
+                  <Link to="/app/admin/workers" className="btn-secondary w-full justify-start gap-3 rounded-full px-4">
+                    <Users className="h-4 w-4 shrink-0" /> Trabajadores
+                  </Link>
+                ) : null}
+                {canReadDrive ? (
+                  <Link to="/app/admin/connections" className="btn-secondary w-full justify-start gap-3 rounded-full px-4">
+                    <Database className="h-4 w-4 shrink-0" /> Conexiones de Drive
+                  </Link>
+                ) : null}
+                {canReadJobs ? (
+                  <Link to="/app/admin/jobs" className="btn-secondary w-full justify-start gap-3 rounded-full px-4">
+                    <FileClock className="h-4 w-4 shrink-0" /> Historial de trabajos
+                  </Link>
+                ) : null}
+                {can(PERMISSIONS.POLICY_WRITE) ? (
+                  <Link to="/app/admin/policy" className="btn-secondary w-full justify-start gap-3 rounded-full px-4">
+                    <ShieldAlert className="h-4 w-4 shrink-0" /> Política institucional
+                  </Link>
+                ) : null}
+              </div>
+            </CardBody>
+          </Card>
+        ) : null}
       </div>
     </div>
   )

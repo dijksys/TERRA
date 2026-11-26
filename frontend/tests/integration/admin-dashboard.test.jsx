@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AdminDashboard from '../../src/pages/admin/DashboardPage'
@@ -20,7 +20,7 @@ vi.mock('../../src/features/realtime/RealtimeContext', () => ({
 
 const allPermissions = [
   'admin.dashboard.read', 'admin.users.read', 'admin.organization.read', 'admin.jobs.read',
-  'admin.drive.read', 'admin.jobs.create', 'admin.audit.read',
+  'admin.drive.read', 'admin.jobs.create', 'admin.audit.read', 'admin.policy.write',
 ]
 
 const dashboard = {
@@ -138,5 +138,45 @@ describe('Dashboard administrativo', () => {
     api.get.mockResolvedValue(dashboard)
     renderDashboard()
     expect(await screen.findByText('Sin actividad registrada.')).toBeInTheDocument()
+  })
+
+  it('presenta Accesos rápidos como píldoras con destinos e iconos actuales', async () => {
+    renderDashboard()
+    await screen.findByText('Trabajadores activos')
+
+    const card = screen.getByRole('heading', { name: 'Accesos rápidos' }).closest('.card')
+    expect(card).toHaveClass('h-fit', 'self-start')
+    expect(within(card).getAllByRole('link')).toHaveLength(4)
+
+    for (const [name, href, icon] of [
+      ['Trabajadores', '/app/admin/workers', 'lucide-users'],
+      ['Conexiones de Drive', '/app/admin/connections', 'lucide-database'],
+      ['Historial de trabajos', '/app/admin/jobs', 'lucide-file-clock'],
+      ['Política institucional', '/app/admin/policy', 'lucide-shield-alert'],
+    ]) {
+      const link = within(card).getByRole('link', { name })
+      expect(link).toHaveAttribute('href', href)
+      expect(link).toHaveClass('btn-secondary', 'w-full', 'justify-start', 'gap-3', 'rounded-full', 'px-4')
+      const svg = link.querySelector('svg')
+      expect(svg).toHaveClass(icon, 'h-4', 'w-4', 'shrink-0')
+    }
+  })
+
+  it('adapta Accesos rápidos a la cantidad de permisos disponibles', async () => {
+    auth.permissions = ['admin.dashboard.read', 'admin.users.read']
+    renderDashboard()
+    await screen.findByText('Trabajadores activos')
+
+    const card = screen.getByRole('heading', { name: 'Accesos rápidos' }).closest('.card')
+    expect(within(card).getAllByRole('link')).toHaveLength(1)
+    expect(within(card).getByRole('link', { name: 'Trabajadores' })).toHaveAttribute('href', '/app/admin/workers')
+    expect(within(card).queryByRole('link', { name: 'Conexiones de Drive' })).not.toBeInTheDocument()
+  })
+
+  it('omite la tarjeta de Accesos rápidos cuando no hay enlaces autorizados', async () => {
+    auth.permissions = ['admin.dashboard.read']
+    renderDashboard()
+    await screen.findByText('Trabajadores activos')
+    expect(screen.queryByRole('heading', { name: 'Accesos rápidos' })).not.toBeInTheDocument()
   })
 })
